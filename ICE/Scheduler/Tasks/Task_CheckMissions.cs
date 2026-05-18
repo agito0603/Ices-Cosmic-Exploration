@@ -1397,6 +1397,33 @@ namespace ICE.Scheduler.Tasks
                 }
             }
         }
+        public static bool? SelectMissionJobTab(uint jobId)
+        {
+            string tag = "[Task Check Mission: Select Mission Job Tab]";
+
+            if (!GenericHelpers.TryGetAddonMaster<WKSMission>("WKSMission", out var missionAddon) || !missionAddon.IsAddonReady)
+            {
+                ReOpenMissionUi(tag);
+                return false;
+            }
+
+            var hudInfo = CosmicHandler.HudInfo();
+            var selectedJobTab = jobId - 8;
+
+            if (hudInfo.SelectedJobIndex == selectedJobTab)
+            {
+                IceLogging.Verbose($"Mission job tab is already selected. Job: {jobId}", tag);
+                return true;
+            }
+
+            if (FrameThrottler.Throttle($"GoldCompletionSelectJobTab_{jobId}", 8))
+            {
+                IceLogging.Info($"Gold Completion: selecting mission list job tab only. Job: {jobId}", tag);
+                missionAddon.SelectClass[JobTab(jobId)].Select();
+            }
+
+            return false;
+        }
         private static void Notes()
         {
             /*

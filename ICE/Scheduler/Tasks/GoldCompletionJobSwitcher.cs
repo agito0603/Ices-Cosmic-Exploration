@@ -73,9 +73,10 @@ namespace ICE.Scheduler.Tasks
             P.TaskManager.Tasks.Clear();
 
             P.TaskManager.EnqueueMulti(
-                new(() => Task_CheckMissions.RefreshMissionLibrary(), "Refreshing mission library after Gold Completion job switch"),
-                new(() => Task_CheckMissions.OpenMissionUi(), "Opening mission UI after Gold Completion job switch"),
-                new(() => Task_CheckMissions.CheckTabs(), "Checking missions after Gold Completion job switch")
+                new(() => Task_CheckMissions.RefreshMissionLibrary(), "Refreshing mission library after Gold Completion job target switch"),
+                new(() => Task_CheckMissions.OpenMissionUi(), "Opening mission UI after Gold Completion job target switch"),
+                new(() => Task_CheckMissions.SelectMissionJobTab(nextJob), "Selecting mission list job tab for Gold Completion"),
+                new(() => Task_CheckMissions.CheckTabs(), "Checking missions after Gold Completion job target switch")
             );
 
             return true;
