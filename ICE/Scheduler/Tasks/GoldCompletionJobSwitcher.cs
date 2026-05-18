@@ -72,17 +72,6 @@ namespace ICE.Scheduler.Tasks
 
             P.TaskManager.Tasks.Clear();
 
-            P.TaskManager.Enqueue(() =>
-            {
-                if ((uint)Player.Job == nextJob)
-                    return true;
-
-                if (EzThrottler.Throttle("GoldCompletionJobSwap"))
-                    GearsetHandler.TaskClassChange((Job)nextJob);
-
-                return false;
-            }, "Changing job for Gold Completion");
-
             P.TaskManager.EnqueueMulti(
                 new(() => Task_CheckMissions.RefreshMissionLibrary(), "Refreshing mission library after Gold Completion job switch"),
                 new(() => Task_CheckMissions.OpenMissionUi(), "Opening mission UI after Gold Completion job switch"),
