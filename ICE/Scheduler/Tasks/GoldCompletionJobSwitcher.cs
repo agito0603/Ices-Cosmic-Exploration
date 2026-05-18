@@ -37,13 +37,28 @@ namespace ICE.Scheduler.Tasks
             if (nextJob == 0)
             {
                 IceLogging.Info(
-                    "Gold Completion: no remaining job with non-Gold missions was found in this scan cycle. Stopping for now.",
+                    "Gold Completion: no currently available non-Gold mission found for any job. Waiting for weather/time/emergency conditions.",
                     tag
                 );
 
-                SchedulerMain.State = IceState.Idle;
-                P.TaskManager.Tasks.Clear();
                 Reset();
+
+                P.TaskManager.Tasks.Clear();
+
+                P.TaskManager.Enqueue(() =>
+                {
+                    if (EzThrottler.Throttle("GoldCompletionWaitForCondition", 15000))
+                        return true;
+
+                    return false;
+                }, "Waiting for Gold Completion condition");
+
+                P.TaskManager.EnqueueMulti(
+                    new(() => Task_CheckMissions.RefreshMissionLibrary(), "Refreshing mission library while waiting for Gold Completion condition"),
+                    new(() => Task_CheckMissions.OpenMissionUi(), "Opening mission UI while waiting for Gold Completion condition"),
+                    new(() => Task_CheckMissions.CheckTabs(), "Checking missions while waiting for Gold Completion condition")
+                );
+
                 return true;
             }
 
