@@ -105,6 +105,10 @@ namespace ICE.Scheduler.Tasks
                 $"Current TerritoryID: {playerTerritory}");
 
             var modeSelected = Mission_Settings.Mode;
+            if (modeSelected != ModeSelect.MissionGoldMode)
+            {
+                GoldCompletionJobSwitcher.Reset();
+            }
             foreach (var mission in CosmicHelper.SheetMissionDict)
             {
                 if (mission.Value.TerritoryId != Player.Territory.RowId)
@@ -248,6 +252,10 @@ namespace ICE.Scheduler.Tasks
 
             if (MissionLibrary.All(x => x.Value.Count == 0))
             {
+            if (modeSelected == ModeSelect.MissionGoldMode)
+            {
+                return GoldCompletionJobSwitcher.TrySwitchToNextJobOrStop();
+            }
                 if (modeSelected == ModeSelect.RelicMode && C.XPRelicOnlyEnabled)
                 {
                     IceLogging.ChatInfo("\"Only selected missions\" is enabled for Relic Grind, but no selected missions match your current job. Please select missions for this job, switch jobs, or disable the option.", "[I.C.E.]");
@@ -382,7 +390,18 @@ namespace ICE.Scheduler.Tasks
                     }
                 }
 
-                P.TaskManager.Enqueue(() => FindReroll(), "Find mission to reroll for");
+                // P.TaskManager.Enqueue(() => FindReroll(), "Find mission to reroll for");
+                if (Mission_Settings.Mode == ModeSelect.MissionGoldMode)
+                {
+                    P.TaskManager.Enqueue(
+                        () => GoldCompletionJobSwitcher.TrySwitchToNextJobOrStop(),
+                        "Trying next job for Gold Completion"
+                    );
+                }
+                else
+                {
+                    P.TaskManager.Enqueue(() => FindReroll(), "Find mission to reroll for");
+                }
             }
             else
             {
