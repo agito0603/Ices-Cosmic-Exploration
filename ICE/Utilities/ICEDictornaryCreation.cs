@@ -1,5 +1,5 @@
 ﻿using ICE.ConfigFiles;
-using ICE.Ui.MainUi.ModeSelect_Modes;
+using ICE.Ui;
 using ICE.Ui.MainUi.Settings;
 using ICE.Utilities.Cosmic_Helper;
 using ICE.Utilities.GatheringHelper;
@@ -13,15 +13,17 @@ namespace ICE;
 
 public sealed partial class ICE
 {
-    public static unsafe void DictionaryCreation()
+    public static void DictionaryCreation()
     {
         var MainMoonSheet = Svc.Data.GetExcelSheet<WKSMissionUnit>();
-        string tag = "[Dictionary Creation]";
+
+        // Build PlaceName -> territory map before we assign TerritoryId on each CosmicInfo entry
+        CosmicTerritoryResolver.Initialize();
 
         foreach (var entry in MainMoonSheet)
         {
-            Dictionary<ushort, CosmicHelper.CraftingInfo> crafts_Main = new();
-            Dictionary<ushort, CosmicHelper.CraftingInfo> crafts_Pre = new();
+            Dictionary<ushort, CraftingInfo> crafts_Main = new();
+            Dictionary<ushort, CraftingInfo> crafts_Pre = new();
             Dictionary<uint, int> gathering_Min = new();
             List<uint> jobs = new();
             Dictionary<int, int> relicXp = new();
@@ -104,49 +106,21 @@ public sealed partial class ICE
             // - - - HEY. BRONZE SCORE IS KEPT HERE - - - //
             uint bronze = missionToDo.Unknown2;
 
-            // TerritoryId that's assigned to each planet. There doesn't seem to be a direct way to grab this...
-            // So just going to hard assign this. TODO: Add last planet when it comes out
-            uint territoryId = 1237;
-            if (keyId < 545)
-            {
-                territoryId = 1237;
-            }
-            else if (keyId < 1040)
-            {
-                territoryId = 1291;
-            }
-            else if (keyId < 1370)
-            {
-                territoryId = 1310;
-            }
-            else if (keyId < 1703)
-            {
-                territoryId = 1321;
-            }
+            // Which moon this mission belongs to (TerritoryType ID, not mission row ID)
+            uint territoryId = CosmicTerritoryResolver.Resolve(entry);
+            if (territoryId == 0)
+                continue; // unresolved — logged once in resolver; do not default to Sinus
 
             // Map Marker Information
             var marker = missionToDo.MapMarker;
             Vector2 mapFlag = new(marker.Value.X - 1024, (marker.Value.Y - 1024));
             int radius = marker.Value.Radius;
 
-            // Oizys decided they were going to perfectly overlap 2 of the markers *-perfectly-*
-            // So specific missions have their positions changed *-ever-* so slightly to make them different for personal use
-            if (keyId == 1272)
-            {
-                mapFlag = new(-340, 870);
-            }
-            else if (keyId == 1264)
-            {
-                mapFlag = new(-573, 3);
-            }
-            else if (keyId == 1296)
-            {
-                mapFlag = new(-514, 232);
-            }
-            else if (keyId is 1317 or 1318 or 1319)
-            {
-                mapFlag = new(mapFlag.X + 1, mapFlag.Y + 1);
-            }
+            // Stacked map markers — nudge slightly so route editor keys stay unique per mission row.
+            if (CosmicMapMarkerNudges.TryGetOverride(keyId, out var overrideFlag))
+                mapFlag = overrideFlag;
+            else if (CosmicMapMarkerNudges.TryGetOverlapNudge(keyId, mapFlag, out var nudgedFlag))
+                mapFlag = nudgedFlag;
 
             // Mission Attributes/Flags. Esentially a quick way to know what is what kind of mission at a quick glance
             MissionAttributes attributes = MissionAttributes.None;
@@ -176,24 +150,28 @@ public sealed partial class ICE
                 attributes = missionToDo.WKSMissionText.RowId switch
                 {
                     103 => MissionAttributes.Gather | MissionAttributes.Limited,
-                    104 => MissionAttributes.Gather | MissionAttributes.ScoreTimeRemaining,
+                    104 => MissionAttributes.Gather | MissionAttributes.Score_TimeRemaining,
                     105 => MissionAttributes.Gather,
-                    106 => MissionAttributes.Gather | MissionAttributes.ScoreChains,
-                    107 => MissionAttributes.Gather | MissionAttributes.ScoreGatherersBoon,
-                    108 => MissionAttributes.Gather | MissionAttributes.ScoreChains | MissionAttributes.ScoreGatherersBoon,
-                    109 or 111 => MissionAttributes.Gather | MissionAttributes.Collectables,
-                    110 => MissionAttributes.Gather | MissionAttributes.ReducedItems | MissionAttributes.ScoreTimeRemaining,
+                    106 => MissionAttributes.Gather | MissionAttributes.Score_Chain,
+                    107 => MissionAttributes.Gather | MissionAttributes.Score_Boon,
+                    108 => MissionAttributes.Gather | MissionAttributes.Score_Chain | MissionAttributes.Score_Boon,
+                    109 or 111 or 372 => MissionAttributes.Gather | MissionAttributes.Collectables,
+                    110 => MissionAttributes.Gather | MissionAttributes.ReducedItems | MissionAttributes.Score_TimeRemaining,
                     112 => MissionAttributes.Gather | MissionAttributes.ReducedItems,
-                    113 => MissionAttributes.Fish | MissionAttributes.ScoreVariety | MissionAttributes.ScoreTimeRemaining,
-                    114 or 115 => MissionAttributes.Fish | MissionAttributes.ScoreTimeRemaining,
-                    116 => MissionAttributes.Fish | MissionAttributes.Limited | MissionAttributes.ScoreVariety,
-                    117 => MissionAttributes.Fish | MissionAttributes.Limited | MissionAttributes.ScoreLargestSize,
+                    113 => MissionAttributes.Fish | MissionAttributes.Score_Variety | MissionAttributes.Score_TimeRemaining,
+                    114 or 115 => MissionAttributes.Fish | MissionAttributes.Score_TimeRemaining,
+                    116 => MissionAttributes.Fish | MissionAttributes.Limited | MissionAttributes.Score_Variety,
+                    117 => MissionAttributes.Fish | MissionAttributes.Limited | MissionAttributes.Score_LargestSize,
                     118 => MissionAttributes.Fish | MissionAttributes.Limited | MissionAttributes.Collectables,
                     119 or 121 => MissionAttributes.Fish,
-                    120 => MissionAttributes.Fish | MissionAttributes.ScoreLargestSize,
+                    120 => MissionAttributes.Fish | MissionAttributes.Score_LargestSize,
                     122 => MissionAttributes.Fish | MissionAttributes.Collectables,
                     139 => jobs.Contains(18) ? MissionAttributes.Fish : MissionAttributes.Gather, // Critical
                     141 => MissionAttributes.Fish,
+                    // Auxesia Tool Mastery gather missions (Geological/Botanical). They use Greater Reach,
+                    // so the GreaterReach block below converts Chain+Boon into GreaterReach_Boon_Chain.
+                    312 or 313 => MissionAttributes.Gather | MissionAttributes.Score_Chain | MissionAttributes.Score_Boon,
+
                     _ => MissionAttributes.None
                 };
             }
@@ -216,9 +194,8 @@ public sealed partial class ICE
 
                 if (isCritical)
                 {
-                    var requiredAmount = 3; // Sinus Specifically
-                    if (keyId > 535)
-                        requiredAmount = 2; // EVERY other planet
+                    // Sinus critical crafts need 3 items; every other hub uses 2 (was keyId > 535 before).
+                    var requiredAmount = territoryId == CosmicMoonRegistry.Sinus.TerritoryId ? 3 : 2;
 
                     if (Svc.Data.GetExcelSheet<Recipe>().TryGetRow(wksRecipeSheet.Value.Recipe[0].RowId, out var RecipeRow))
                     {
@@ -487,12 +464,23 @@ public sealed partial class ICE
                 IceLogging.Verbose($"Temp ActionId: {tempActionId} | MissionID: {keyId}", debugOnly: true);
             if (tempActionId == 42060)
             {
-                if (attributes.HasFlag(MissionAttributes.ScoreGatherersBoon))
-                    attributes |= MissionAttributes.GreaterReachBoon;
-                else if (attributes.HasFlag(MissionAttributes.ScoreChains))
-                    attributes |= MissionAttributes.GreaterReachChain;
+                if (attributes.HasFlag(MissionAttributes.Score_Boon) && attributes.HasFlag(MissionAttributes.Score_Chain))
+                {
+                    attributes &= ~(MissionAttributes.Score_Boon | MissionAttributes.Score_Chain);
+                    attributes |= MissionAttributes.GreaterReach_Boon_Chain;
+                }
+                else if (attributes.HasFlag(MissionAttributes.Score_Boon))
+                {
+                    attributes &= ~MissionAttributes.Score_Boon;
+                    attributes |= MissionAttributes.GreaterReach_Boon;
+                }
+                else if (attributes.HasFlag(MissionAttributes.Score_Chain))
+                {
+                    attributes &= ~MissionAttributes.Score_Chain;
+                    attributes |= MissionAttributes.GreaterReach_Chain;
+                }
                 else
-                    attributes |= MissionAttributes.GreaterReachGather;
+                    attributes |= MissionAttributes.GreaterReach_GatherX;
             }
 
             // - - - Fisher - - - //
@@ -573,6 +561,7 @@ public sealed partial class ICE
             {
                 CosmicHelper.SheetMissionDict[keyId] = new CosmicInfo()
                 {
+                    MissionId = keyId,
                     Name = missionName,
                     Jobs = jobs,
                     ToDoId = missionToDo.RowId,
@@ -594,8 +583,8 @@ public sealed partial class ICE
                     ExpModifier_2 = expModifier_2,
                     ExpModifier_3 = expModifier_3,
 
-                    RewardItem = rewardItemId,
-                    RewardItemAmount = rewardItemAmount,
+                    TokenItemId = rewardItemId,
+                    TokenItemAmount = rewardItemAmount,
                     DronebitReward = dronebitAmount,
 
                     MapPosition = mapFlag,
@@ -618,8 +607,8 @@ public sealed partial class ICE
             }
         }
 
-        // Sequence Loading/Storing
-        // 1st passthrough
+        #region Sequence Mission Storing
+
         foreach (var (missionId, info) in CosmicHelper.SheetMissionDict)
         {
             if (info.PreviousMissionId == missionId) 
@@ -657,6 +646,10 @@ public sealed partial class ICE
             }
         }
 
+        #endregion
+
+        #region Icon Assignment
+
         foreach (var Icon in LeveAssignmentSheet)
         {
             var iconId = Icon.RowId;
@@ -676,21 +669,24 @@ public sealed partial class ICE
             {
                 if (Svc.Texture.TryGetFromGameIcon(jobicon, out var texture))
                 {
-                    JobIconDict.TryAdd(iconId, texture);
+                    ClassInfoDict[iconId].JobIcon = texture;
                 }
             }
         }
 
-        for (int i = 0; i < CosmicHelper.GreyIconList.Count; i++)
+        for (uint i = 8; i < 19; i++)
         {
-            var slot = i + 8;
-            var iconId = GreyIconList[i];
-
-            if (Svc.Texture.TryGetFromGameIcon(iconId, out var texture))
+            if (Svc.Data.GetExcelSheet<ClassJob>().TryGetRow(i, out var classInfo))
             {
-                GreyTexture.TryAdd((uint)slot, texture);
+                var classDict = ClassInfoDict[i];
+                classDict.JobName = classInfo.Name.ToString();
+                classDict.shortName = classInfo.Abbreviation.ToString();
             }
         }
+
+        #endregion
+
+        #region Score Loading
 
         CosmicHelper.LoadMissionScores();
 
@@ -718,29 +714,19 @@ public sealed partial class ICE
             }
         }
 
-        foreach (var item in MoonItemInfoSheet)
+        #endregion
+
+        #region Mission Notes
+
+        // Sheet-driven unlock + quick-level lists (used to be huge static arrays in CustomNotes).
+        CosmicMissionLists.BuildFromSheet();
+        CosmicHelper.CreateMissionNotes();
+        foreach (var mission in MissionUnlock)
         {
-            var itemId = item.Item.RowId;
-            if (itemId == 0) continue;
-            string itemName = ItemSheet.GetRow(itemId).Name.ToString();
-            var type = item.WKSItemSubCategory.RowId;
-            // IceLogging.Debug($"RowID: {item.RowId} | ID: {itemId} | Name: {itemName}", debugOnly: true);
-
-            if (CosmicHelper.GatheringItems.TryGetValue(itemName, out var itemEntry))
-            {
-                itemEntry.itemIds.Add(itemId);
-            }
-            else
-            {
-                // IceLogging.Debug($"Adding a new entry: {itemName}", debugOnly: true);
-
-                CosmicHelper.GatheringItems[itemName] = new()
-                {
-                    Type = item.WKSItemSubCategory.RowId,
-                    itemIds = new HashSet<uint> { itemId },
-                };
-            }
+            CosmicHelper.SheetMissionDict[mission.Key].MissionUnlock = mission.Value;
         }
+
+        #endregion
 
         foreach (var weather in CosmicHelper.WeatherIds)
         {
@@ -793,6 +779,10 @@ public sealed partial class ICE
         }
 
         EnsureAllMission();
+        GatheringUtil.RegisterPresets();
+        CosmicMoonContent.LogContentSummary();
+
+        #region Config Stuff
 
         foreach (var mission in C.MissionConfig)
         {
@@ -810,7 +800,7 @@ public sealed partial class ICE
 
         // This is here, merely for the reason of I want a random joke to show up every time they boot up the plugin. I even added some more!
         var random = new Random();
-        modeSelect_TableInfo.jokeId = random.Next(0, modeSelect_TableInfo.JokeList.Count-1);
+        Window_ExternalDetails.jokeId = random.Next(0, Window_ExternalDetails.JokeList.Count-1);
 
         if (!C.ShowManualMode)
         {
@@ -868,6 +858,8 @@ public sealed partial class ICE
         }
 
         C.Save();
+
+        #endregion
     }
 
     private static void MigrateConfigSettings()

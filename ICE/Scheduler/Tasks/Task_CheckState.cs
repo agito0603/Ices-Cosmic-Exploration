@@ -99,8 +99,20 @@ namespace ICE.Scheduler.Tasks
                         }
                         else if (s.HasFlag(MissionAttributes.Fish))
                         {
-                            IceLogging.Debug("We seem to be in the middle of a fishing mission. Going to reset/import all the presets");
-                            Task_ExecuteMission.FishingTask(currentMissionId);
+                            IceLogging.Debug("We seem to be in the middle of a fishing mission. Going to check presets");
+							var missionConfig = C.MissionConfig[currentMissionId];
+							if (config.Use_BuildinPreset)
+							{
+								IceLogging.Debug("Use Built-In Presets Checked. Resetting/Importing presets.");
+								P.AutoHook.DeleteAllAnonymousPresets();
+								Task_ExecuteMission.FishingTask(currentMissionId);
+							}
+							else
+							{
+								IceLogging.Debug("Use Built-In Presets Unchecked. Setting configured preset.");
+								string presetName = missionConfig.AutoHookPresetName;
+								P.AutoHook.SetPreset(presetName);
+							}
                             SchedulerMain.State = IceState.ScoreCheck;
                         }
                         else
@@ -129,7 +141,8 @@ namespace ICE.Scheduler.Tasks
                 if (C.StopOnceHitLunarCredits)
                 {
                     var territory = Player.Territory.RowId;
-                    var itemId = CosmicHelper.PlanetCreditInfo[territory];
+                    if (!CosmicMoonRegistry.TryGetPlanetCreditItemId(territory, out var itemId))
+                        return false;
 
                     PlayerHelper.GetItemCount(itemId, out var credits);
                     if (credits >= C.LunarCreditsCap)
@@ -219,7 +232,8 @@ namespace ICE.Scheduler.Tasks
                 if (C.StopOnceHitLunarCredits)
                 {
                     var territory = Player.Territory.RowId;
-                    var itemId = CosmicHelper.PlanetCreditInfo[territory];
+                    if (!CosmicMoonRegistry.TryGetPlanetCreditItemId(territory, out var itemId))
+                        return false;
 
                     PlayerHelper.GetItemCount(itemId, out var credits);
                     if (credits >= C.LunarCreditsCap)
@@ -347,21 +361,19 @@ namespace ICE.Scheduler.Tasks
 
             var agenda = C.Cosmic_Agenda;
             var relicProgress = CosmicHelper.Cosmic_ClassInfo();
-            PlayerHelper.GetItemCount(45690, out var creditAmount);
+            PlayerHelper.GetItemCount(CosmicHelper.CosmoCreditItemId, out var creditAmount);
             int planetCreditAmount = 10000;
             var territory = Player.Territory.RowId;
             if (PlayerHelper.IsInCosmicZone())
             {
-                var planetCreditId = CosmicHelper.PlanetCreditInfo[territory];
-                PlayerHelper.GetItemCount(planetCreditId, out planetCreditAmount);
+                if (CosmicMoonRegistry.TryGetPlanetCreditItemId(territory, out var planetCreditId))
+                    PlayerHelper.GetItemCount(planetCreditId, out planetCreditAmount);
             }
 
+            // Dronebits exist on Oizys and Auxesia only — TryGetValue avoids throwing on Sinus/Phaenna
             int dronebitAmount = 5000;
-            if (PlayerHelper.IsInOizys())
-            {
-                var dronebitId = CosmicHelper.DronebitInfo[territory].creditId;
-                PlayerHelper.GetItemCount(dronebitId, out dronebitAmount);
-            }
+            if (CosmicMoonRegistry.TryGetDronebit(territory, out var dronebit))
+                PlayerHelper.GetItemCount(dronebit.creditId, out dronebitAmount);
 
             IceLogging.Verbose("Checking to see which one we're going to start (if any)", tag);
 
@@ -403,11 +415,11 @@ namespace ICE.Scheduler.Tasks
                 var goal = entry.SelectedOption;
                 bool achieved = false;
 
+                if (CosmicMoonRegistry.IsMaxRelicPlaylistGoal(goal))
+                    achieved = relicLevel >= CosmicMoonRegistry.GetMaxRelicGoal(goal);
+                else
                 achieved = goal switch
                 {
-                    PlaylistOptions.SinusMax => relicLevel >= 9,
-                    PlaylistOptions.PhaennaMax => relicLevel >= 14,
-                    PlaylistOptions.OizysMax => relicLevel >= 17,
                     PlaylistOptions.SelectedRelicLv => relicLevel >= entry.SelectedRelicLevel,
                     PlaylistOptions.CreditAmount => creditAmount >= entry.CreditAmount,
                     PlaylistOptions.PlanetAmount => planetCreditAmount >= entry.PlanetAmount,
@@ -502,20 +514,19 @@ namespace ICE.Scheduler.Tasks
                 return true;
             }
 
-            if (CosmicHelper.DronebitInfo.TryGetValue(territoryId, out var dronebitAmount))
+            if (CosmicMoonRegistry.TryGetDronebit(territoryId, out var dronebitAmount))
             {
                 BuyDrones = C.Cosmodrone_Buy && Task_ArtifactSearch.CanBuyDroneBoxes();
                 IceLogging.Verbose($"Buying drones? {BuyDrones}", tag);
             }
-            if (CosmicHelper.PlanetCreditInfo.TryGetValue(territoryId, out var gambaCredits) && PlayerHelper.GetItemCount(gambaCredits, out var gambaAmount))
+            if (CosmicMoonRegistry.TryGetPlanetCreditItemId(territoryId, out var gambaCredits) && PlayerHelper.GetItemCount(gambaCredits, out var gambaAmount))
             {
                 IceLogging.Verbose($"{C.GambaAtAmount} >= {gambaAmount} && Gamba between runs {C.GambaBetweenRuns}");
                 GambaWheel = C.GambaAtAmount <= gambaAmount && C.GambaBetweenRuns;
             }
             if (C.BuyItems)
             {
-                uint cosmoCreditId = 45690;
-                if (PlayerHelper.GetItemCount(cosmoCreditId, out var creditAmount))
+                if (PlayerHelper.GetItemCount(CosmicHelper.CosmoCreditItemId, out var creditAmount))
                 {
                     BuyItems = creditAmount >= C.CosmoBuyAtAmount && Task_BuyCosmoItems.CanPurchaseAnyItem();
                 }

@@ -8,16 +8,8 @@ namespace ICE.Ui.DebugWindowTabs
     {
         public static unsafe void Draw()
         {
-            uint currentScore = 0;
-            uint silverScore = 0;
-            uint goldScore = 0;
-
             if (GenericHelpers.TryGetAddonMaster<WKSMissionInfomation>("WKSMissionInfomation", out var x) && x.IsAddonReady)
             {
-                // currentScore = x.CurrentScore;
-                // silverScore = x.SilverScore;
-                // goldScore = x.GoldScore;
-
                 var isAddonReady = AddonHelper.IsAddonActive("WKSMissionInfomation");
                 ImGui.Text($"Addon Ready: {isAddonReady}");
                 if (isAddonReady)
@@ -127,23 +119,24 @@ namespace ICE.Ui.DebugWindowTabs
                     }
 
                     var wks = WKSManager.Instance();
+                    if (wks == null)
+                        return;
+
+                    var scores = wks->State.Scores;
 
                     ImGui.TableNextRow();
                     ImGui.TableSetColumnIndex(0);
                     ImGui.Text("Score 1");
                     ImGui.TableNextColumn();
-                    ImGui.Text($"{wks->Scores.Length}");
+                    ImGui.Text($"{scores.Length}");
 
-                    int score = 0;
-
-                    foreach (var item in wks->Scores)
+                    for (int score = 0; score < scores.Length; score++)
                     {
                         ImGui.TableNextRow();
                         ImGui.TableSetColumnIndex(0);
                         ImGui.Text($"Score: [{score}]");
                         ImGui.TableNextColumn();
-                        ImGui.Text($"{wks->Scores[score]}");
-                        score += 1;
+                        ImGui.Text($"{scores[score]}");
                     }
 
                     /*
@@ -171,7 +164,7 @@ namespace ICE.Ui.DebugWindowTabs
             var managerPtr = WKSManager.Instance();
             if (managerPtr == null) return 0;
 
-            return managerPtr->CurrentScore;
+            return managerPtr->State.CurrentMission.Score;
         }
     }
 }

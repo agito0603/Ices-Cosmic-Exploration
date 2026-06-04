@@ -142,7 +142,7 @@ namespace ICE.Ui.MainUi.Settings
                     FontAwesomeIcon icon = entry switch
                     {
                         MissionTypes.DroneSearch => FontAwesomeIcon.Satellite,
-                        MissionTypes.RedAlert => FontAwesomeIcon.Bell,
+                        MissionTypes.Critical => FontAwesomeIcon.Bell,
                         MissionTypes.Provisional => FontAwesomeIcon.HourglassHalf,
                         MissionTypes.Standard => FontAwesomeIcon.Star,
                         _ => FontAwesomeIcon.Question
@@ -154,7 +154,7 @@ namespace ICE.Ui.MainUi.Settings
                     string name = entry switch
                     {
                         MissionTypes.DroneSearch => "Drone Search",
-                        MissionTypes.RedAlert => "Red Alert",
+                        MissionTypes.Critical => "Red Alert",
                         MissionTypes.Provisional => "Provisional Missions [Weather/Timed/Sequence]",
                         MissionTypes.Standard => "Standard Missions [A->D]",
                         _ => $"{entry}"
@@ -220,9 +220,9 @@ namespace ICE.Ui.MainUi.Settings
                     _dragDrop_JobPrio.DrawButtonDummy(entry, C.JobPrio, i);
 
                     ImGui.TableNextColumn();
-                    if (CosmicHelper.JobIconDict.TryGetValue(entry, out var icon))
+                    if (CosmicHelper.ClassInfoDict.TryGetValue(entry, out var icon))
                     {
-                        ImGui.Image(icon.GetWrapOrEmpty().Handle, new(24, 24));
+                        ImGui.Image(icon.JobIcon.GetWrapOrEmpty().Handle, new(24, 24));
                     }
 
                     ImGui.TableNextColumn();

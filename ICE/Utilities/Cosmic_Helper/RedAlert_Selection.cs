@@ -227,6 +227,15 @@ public static partial class CosmicHelper
 
     #endregion
 
+    #region Auxesia
+
+    // Red-alert turn-ins for 1370+ aren't wired yet. When you're in zone:
+    // 1) Drop CriticalInfo blocks here (copy Oizys: RawLocation, MapInfo, NpcSelection 0/1)
+    // 2) AddKeys(...) in UpdateCriticalWeather below
+    // 3) Matching weather strings in AnnouncementHandlers for territory 1319
+
+    #endregion
+
     public static Dictionary<uint, CriticalInfo> CriticalLocations = new();
 
     public static void UpdateCriticalWeather()
@@ -267,8 +276,8 @@ public static partial class CosmicHelper
         AddKeys(AnnealingWinds1α, 1028, 1032, 1037);
         AddKeys(AnnealingWinds1β, 1011, 1020, 1035);
 
-        AddKeys(AnnealingWinds2α, 1008, 1036);
-        AddKeys(AnnealingWinds2β, 1013, 1029, 1038);
+        AddKeys(AnnealingWinds2α, 1013, 1029, 1038);
+        AddKeys(AnnealingWinds2β, 1008, 1036);
 
         // Glass Rain 1/α
         AddKeys(GlassRain1α, 1009, 1014, 1021);
@@ -288,6 +297,9 @@ public static partial class CosmicHelper
 
         AddKeys(BubbleBloom1α, 1348, 1362, 1366);
         AddKeys(BubbleBloom1β, 1355, 1364, 1368);
+
+        // Auxesia criticals — AddKeys(...) once the CriticalInfo blocks above exist.
+
     }
 
     private static void AddKeys(CriticalInfo location, params uint[] keys)

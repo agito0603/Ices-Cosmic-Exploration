@@ -81,6 +81,12 @@ namespace ICE.Ui.MainUi.Settings
                 C.DelayPostRelic = delayRelic;
                 C.SaveDebounced();
             }
+            bool gatherDelay = C.Delay_Gather;
+            if (ImGui.Checkbox("Add delay to gather", ref gatherDelay))
+            {
+                C.Delay_Gather = gatherDelay;
+                C.Save();
+            }
         }
     }
 }
