@@ -214,37 +214,50 @@ namespace ICE.Scheduler.Tasks
                         if (MissionGolded(missionId))
                             continue;
 
-                        if (mission.Value.Attributes.HasFlag(MissionAttributes.Critical))
+                        var canRunAnyJob = mission.Value.Jobs.Any(jobId =>
+                            CosmicHelper.SupportedJobs.Contains(jobId)
+                            && Player.GetLevel((Job)jobId) >= mission.Value.Level);
+
+                        if (!canRunAnyJob)
+                            continue;
+
+                        if (provisional)
                         {
-                            if (C.GrindOffClassRedAlert)
-                                MissionLibrary[LibraryInfo(mission)].Add(missionId);
-                            else if (mission.Value.Jobs.Contains(Mission_Settings.SelectedJob))
-                                MissionLibrary[LibraryInfo(mission)].Add(missionId);
-                        }
-                        else if (provisional)
-                        {
-                            if (C.GrindAllProvisionals || mission.Value.Jobs.Contains(Mission_Settings.SelectedJob))
+                            if (mission.Value.SequenceMissions_Previous.Count() != 0 || mission.Value.SequenceMissions_Next.Count() != 0)
                             {
-                                if (mission.Value.SequenceMissions_Previous.Count() != 0 || mission.Value.SequenceMissions_Next.Count() != 0)
+                                foreach (var prevSeqMission in mission.Value.SequenceMissions_Previous)
                                 {
-                                    foreach (var prevSeqMission in mission.Value.SequenceMissions_Previous)
+                                    var seqMission = CosmicHelper.SheetMissionDict
+                                        .Where(x => x.Key == prevSeqMission)
+                                        .FirstOrDefault();
+
+                                    if (seqMission.Value != default
+                                        && !MissionLibrary[LibraryInfo(seqMission)].Contains(prevSeqMission))
                                     {
-                                        var seqMission = CosmicHelper.SheetMissionDict.Where(x => x.Key == prevSeqMission).FirstOrDefault();
-                                        if (!MissionLibrary[LibraryInfo(seqMission)].Contains(prevSeqMission))
-                                            MissionLibrary[LibraryInfo(seqMission)].Add(prevSeqMission);
-                                    }
-                                    foreach (var nextSeqMission in mission.Value.SequenceMissions_Next)
-                                    {
-                                        var seqMission = CosmicHelper.SheetMissionDict.Where(x => x.Key == nextSeqMission).FirstOrDefault();
-                                        if (!MissionLibrary[LibraryInfo(seqMission)].Contains(nextSeqMission))
-                                            MissionLibrary[LibraryInfo(seqMission)].Add(nextSeqMission);
+                                        MissionLibrary[LibraryInfo(seqMission)].Add(prevSeqMission);
                                     }
                                 }
-                                MissionLibrary[LibraryInfo(mission)].Add(missionId);
+
+                                foreach (var nextSeqMission in mission.Value.SequenceMissions_Next)
+                                {
+                                    var seqMission = CosmicHelper.SheetMissionDict
+                                        .Where(x => x.Key == nextSeqMission)
+                                        .FirstOrDefault();
+
+                                    if (seqMission.Value != default
+                                        && !MissionLibrary[LibraryInfo(seqMission)].Contains(nextSeqMission))
+                                    {
+                                        MissionLibrary[LibraryInfo(seqMission)].Add(nextSeqMission);
+                                    }
+                                }
                             }
-                        }
-                        else if (mission.Value.Jobs.Contains(Mission_Settings.SelectedJob))
+
                             MissionLibrary[LibraryInfo(mission)].Add(missionId);
+                        }
+                        else
+                        {
+                            MissionLibrary[LibraryInfo(mission)].Add(missionId);
+                        }
                     }
                 }
                 else
@@ -339,6 +352,36 @@ namespace ICE.Scheduler.Tasks
             string tag = "Check Missions: Check Tabs";
             var priority = C.MissionTypePrio;
 
+            List<uint> GoldCompletionJobsToCheck(IEnumerable<uint> missions)
+            {
+                var jobs = C.JobPrio
+                    .Where(jobId => CosmicHelper.SupportedJobs.Contains(jobId))
+                    .Where(jobId => Player.GetLevel((Job)jobId) > 0)
+                    .Where(jobId => missions.Any(missionId =>
+                        CosmicHelper.SheetMissionDict.TryGetValue(missionId, out var mission)
+                        && mission.Jobs.Contains(jobId)
+                        && Player.GetLevel((Job)jobId) >= mission.Level))
+                    .Distinct()
+                    .ToList();
+
+                if (jobs.Remove(Mission_Settings.SelectedJob))
+                    jobs.Insert(0, Mission_Settings.SelectedJob);
+
+                return jobs;
+            }
+
+            void EnqueueGoldCompletionChecks(List<uint> missions, MissionTypes type, string label)
+            {
+                foreach (var jobToCheck in GoldCompletionJobsToCheck(missions))
+                {
+                    var targetJob = jobToCheck;
+                    P.TaskManager.Enqueue(
+                        () => CheckMissions(missions, type, targetJob),
+                        $"Checking {label} for Gold Completion job {targetJob}"
+                    );
+                }
+            }
+
             if (GenericHelpers.TryGetAddonMaster<WKSMission>("WKSMission", out var x) && x.IsAddonReady)
             {
                 foreach (var type in C.MissionTypePrio)
@@ -349,7 +392,14 @@ namespace ICE.Scheduler.Tasks
                         {
                             if (MissionLibrary[MissionKind.Critical].Count > 0)
                             {
-                                P.TaskManager.Enqueue(() => CheckMissions(MissionLibrary[MissionKind.Critical], type), "Checking Critical tab for missions");
+                                if (Mission_Settings.Mode == ModeSelect.MissionGoldMode)
+                                {
+                                    EnqueueGoldCompletionChecks(MissionLibrary[MissionKind.Critical], type, "Critical tab missions");
+                                }
+                                else
+                                {
+                                    P.TaskManager.Enqueue(() => CheckMissions(MissionLibrary[MissionKind.Critical], type), "Checking Critical tab for missions");
+                                }
                             }
                             break;
                         }
@@ -383,7 +433,14 @@ namespace ICE.Scheduler.Tasks
                             }
                             if (provisionals.Count > 0)
                             {
-                                P.TaskManager.Enqueue(() => CheckMissions(provisionals, type), "Checking Provisional tab for missions");
+                                if (Mission_Settings.Mode == ModeSelect.MissionGoldMode)
+                                {
+                                    EnqueueGoldCompletionChecks(provisionals, type, "Provisional tab missions");
+                                }
+                                else
+                                {
+                                    P.TaskManager.Enqueue(() => CheckMissions(provisionals, type), "Checking Provisional tab for missions");
+                                }
                             }
                             break;
                         }
@@ -405,16 +462,28 @@ namespace ICE.Scheduler.Tasks
                                         }
                                     }
                                 }
-                                P.TaskManager.Enqueue(() => CheckMissions(basicMissions, type, Mission_Settings.SelectedJob));
-                                /*
-                                foreach (var job in C.JobPrio)
+                                var jobsToCheck = C.JobPrio
+                                    .Where(job => CosmicHelper.SupportedJobs.Contains(job))
+                                    .Where(job => Player.GetLevel((Job)job) > 0)
+                                    .Where(job => basicMissions.Any(missionId =>
+                                        CosmicHelper.SheetMissionDict.TryGetValue(missionId, out var mission)
+                                        && mission.Jobs.Contains(job)))
+                                    .ToList();
+
+                                if (jobsToCheck.Contains(Mission_Settings.SelectedJob))
                                 {
-                                    if (job == Mission_Settings.SelectedJob)
-                                        continue;
-                                    else
-                                        P.TaskManager.Enqueue(() => CheckMissions(basicMissions, type, job));
+                                    jobsToCheck.Remove(Mission_Settings.SelectedJob);
+                                    jobsToCheck.Insert(0, Mission_Settings.SelectedJob);
                                 }
-                                */
+
+                                foreach (var jobToCheck in jobsToCheck)
+                                {
+                                    var targetJob = jobToCheck;
+                                    P.TaskManager.Enqueue(
+                                        () => CheckMissions(basicMissions, type, targetJob),
+                                        $"Checking Basic Mission tab for Gold Completion job {targetJob}"
+                                    );
+                                }
                                 break;
                             }
                             else
@@ -493,10 +562,53 @@ namespace ICE.Scheduler.Tasks
 
                 var job = Goldjob != 0 ? Goldjob : Mission_Settings.SelectedJob;
 
+                bool IsActiveClassScoreAgenda()
+                {
+                    var classInfo = CosmicHelper.Cosmic_ClassInfo();
+
+                    if (!classInfo.TryGetValue(job, out var jobInfo))
+                        return false;
+
+                    return C.Cosmic_Agenda.Any(entry =>
+                        entry.SelectedOption == PlaylistOptions.ClassScore
+                        && entry.SelectedJob == job
+                        && entry.SelectedMode == ModeSelect.Standard
+                        && jobInfo.Score < entry.ClassScore);
+                }
+
+                uint FindBestNonGoldMission(IEnumerable<uint> candidates)
+                {
+                    return candidates
+                        .Where(x => CosmicHelper.SheetMissionDict.TryGetValue(x, out var sheetInfo)
+                            && sheetInfo.TerritoryId == Player.Territory.RowId
+                            && sheetInfo.Jobs.Contains(job)
+                            && sheetInfo.CompletionStatus < CosmicHelper.Status.Gold
+                            && Player.GetLevel((Job)job) >= sheetInfo.Level)
+                        .OrderByDescending(x => CosmicHelper.SheetMissionDict[x].ClassScore)
+                        .FirstOrDefault();
+                }
+
+                bool TryQueueNonGoldMission(IEnumerable<uint> candidates, string sourceLabel)
+                {
+                    var mission = FindBestNonGoldMission(candidates);
+
+                    if (mission == 0)
+                        return false;
+
+                    IceLogging.Info($"Prioritizing available non-gold mission from {sourceLabel}. Mission: {mission}", tag);
+                    LogInfo(mission);
+                    Insert_GrabMissionTask(mission);
+                    return true;
+                }
+
                 // Tool Mastery missions live on their own category tab (3); everything else is Basic (0).
                 byte categoryTab = type is MissionTypes.ToolMastery ? CosmicHandler.ToolMasteryTab : (byte)0;
 
-                if (CorrectJobTab(job, categoryTab))
+                bool correctTab = mode == ModeSelect.MissionGoldMode && Goldjob != 0
+                    ? SelectMissionJobTab(job) == true
+                    : CorrectJobTab(job, categoryTab);
+
+                if (correctTab)
                 {
                     if (type is MissionTypes.ToolMastery)
                     {
@@ -708,8 +820,11 @@ namespace ICE.Scheduler.Tasks
                             IceLogging.Verbose($"{exp.Key} : Value: {exp.Value:N2}", tag);
                         }
 
-                        var filteredList = missionList.Where(x => CosmicHelper.SheetMissionDict[x].RelicXpInfo.Any(kvp => urgency.ContainsKey(kvp.Key) && urgency[kvp.Key] > 0));
-                        if (filteredList.Count() == 0)
+                        var filteredList = missionList
+                            .Where(x => CosmicHelper.SheetMissionDict[x].RelicXpInfo.Any(kvp => urgency.ContainsKey(kvp.Key) && urgency[kvp.Key] > 0))
+                            .ToList();
+
+                        if (filteredList.Count == 0)
                         {
                             if (EzThrottler.Throttle("No viable missions throttle"))
                                 IceLogging.Info("We've hit a point where somehow, there's no possible missions that could be grabbed to help you increase your exp to the point it's needed\n" +
@@ -719,6 +834,13 @@ namespace ICE.Scheduler.Tasks
                         }
                         else
                         {
+                            var availableRelicCandidates = filteredList
+                                .Where(x => basicMissionList.Contains(x) || specialMissionList.Contains(x))
+                                .ToList();
+
+                            if (TryQueueNonGoldMission(availableRelicCandidates, "relic mode"))
+                                return true;
+
                             uint bestMissionId = 0;
                             float bestScore = float.NegativeInfinity;
 
@@ -776,6 +898,12 @@ namespace ICE.Scheduler.Tasks
                                 $"Loaded mission Count: {missionList.Count()}\n" +
                                 $"Amount of viable missions: {basicMissionList.Count()}", tag);
 
+                            if (IsActiveClassScoreAgenda()
+                                && TryQueueNonGoldMission(missionList.Where(x => basicMissionList.Contains(x)), "class score agenda standard missions"))
+                            {
+                                return true;
+                            }
+
                             foreach (var missionId in missionList)
                             {
                                 if (basicMissionList.Contains(missionId))
@@ -796,6 +924,12 @@ namespace ICE.Scheduler.Tasks
                                 $"Loaded mission count: {missionList.Count()}\n" +
                                 $"Amount of viable missions: {specialMissionList.Count()}", tag);
 
+                            if (IsActiveClassScoreAgenda()
+                                && TryQueueNonGoldMission(missionList.Where(x => specialMissionList.Contains(x)), "class score agenda provisional missions"))
+                            {
+                                return true;
+                            }
+
                             foreach (var missionId in missionList)
                             {
                                 if (specialMissionList.Contains(missionId))
@@ -815,6 +949,12 @@ namespace ICE.Scheduler.Tasks
                                 $"Mode: {type}\n" +
                                 $"Loaded mission count: {missionList.Count()}\n" +
                                 $"Amount of available missions: {criticalMissions.Count()}", tag);
+
+                            if (IsActiveClassScoreAgenda()
+                                && TryQueueNonGoldMission(missionList.Where(x => criticalMissions.Contains(x)), "class score agenda critical missions"))
+                            {
+                                return true;
+                            }
 
                             foreach (var missionId in missionList)
                             {
@@ -1462,7 +1602,7 @@ namespace ICE.Scheduler.Tasks
             if (FrameThrottler.Throttle($"GoldCompletionSelectJobTab_{jobId}", 8))
             {
                 IceLogging.Info($"Gold Completion: selecting mission list job tab only. Job: {jobId}", tag);
-                missionAddon.SelectClass[JobTab(jobId)].Select();
+                missionAddon.SelectClass[selectedJobTab].Select();
             }
 
             return false;

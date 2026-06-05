@@ -536,7 +536,9 @@ namespace ICE.Scheduler.Tasks
                 var jobId = Mission_Settings.SelectedJob;
                 var relicInfo = relicProgress[jobId];
 
-                bool isUpgradable = relicInfo.Stage_Current != relicInfo.Stage_Next;
+                bool isUpgradable =
+                    relicInfo.Stage_Current < 20
+                    && relicInfo.Stage_Current != relicInfo.Stage_Next;
 
                 if (isUpgradable)
                 {
