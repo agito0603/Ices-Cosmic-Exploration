@@ -160,13 +160,9 @@ public sealed partial class ICE : IDalamudPlugin
 
     private void OnDraw()
     {
-        if (PlayerHelper.IsInCosmicZone())
+        if (PlayerHelper.IsInCosmicZone() && Player.Available)
         {
-            // Queue gather-route visuals while the debug window is open (even when
-            // collapsed), so the overlay survives folding the window. Must run before
-            // DrawPicto, which flushes the queued draw commands this frame.
-            if (debugWindow?.IsOpen == true)
-                Ui.DebugWindowTabs.Ui_GatherRoute_Editor.QueueWorldVisuals();
+            
 
             PictoManager.DrawPicto();
         }
@@ -325,26 +321,6 @@ public sealed partial class ICE : IDalamudPlugin
 
     public void TestLoadRoutes()
     {
-        try
-        {
-            // Clear cache first to force reload
-            GatheringRouteLoader.ClearCache();
 
-            var routes = GatheringRouteLoader.LoadAllRoutes();
-
-            IceLogging.Info($"Successfully loaded {routes.Count} zones with {routes.Sum(x => x.Value.Count)} total routes");
-
-            // Test getting a specific route
-            var testRoute = GatheringRouteLoader.GetRoute(CosmicMoonRegistry.Sinus.TerritoryId, new Vector2(-690f, -752f));
-            if (testRoute != null)
-            {
-                IceLogging.Info($"Test route loaded successfully with {testRoute.Count} nodes");
-            }
-        }
-        catch (Exception ex)
-        {
-            IceLogging.Error($"Failed to load routes: {ex.Message}");
-            IceLogging.Error(ex.StackTrace ?? "No stack trace");
-        }
     }
 }

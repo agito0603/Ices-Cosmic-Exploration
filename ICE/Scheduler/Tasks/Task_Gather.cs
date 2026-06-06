@@ -4,12 +4,12 @@ using ECommons.GameHelpers;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ICE.Utilities.Cosmic_Helper;
-using ICE.Resources.GatheringRoutes;
 using ICE.Utilities.GatheringHelper;
 using System.Collections.Generic;
 using static ECommons.UIHelpers.AddonMasterImplementations.AddonMaster;
 using static ICE.ConfigFiles.Config;
 using MissionRank = FFXIVClientStructs.FFXIV.Client.Game.WKS.WKSMissionModule.MissionRank;
+using ICE.Utilities.GatheringHelper.RouteLoader;
 
 namespace ICE.Scheduler.Tasks
 {
@@ -285,15 +285,15 @@ namespace ICE.Scheduler.Tasks
 
             var zoneId = Player.Territory;
             var missionEntry = CosmicHelper.CurrentMissionInfo;
-            var missionFlag = missionEntry.MapPosition;
-            var gatherInfo = GatheringRouteLoader.GetRoute(zoneId.RowId, missionFlag);
+            var gatherFile = GatheringRouteLoader.GetRoute(missionEntry.Gather_MapKey);
+            var gatherInfo = gatherFile?.Nodes;
 
             if (gatherInfo != null)
             {
-                if (Mission_Settings.previousMap != missionFlag)
+                if (Mission_Settings.previousRouteId != missionEntry.Gather_MapKey)
                 {
                     // We're currently at a whole new area. So going to check the gathering nodes to see which one we're closest to
-                    Mission_Settings.previousMap = missionFlag;
+                    Mission_Settings.previousRouteId = missionEntry.Gather_MapKey;
                     var closestNodeIndex = gatherInfo.Select((node, index) => new { Node = node, Index = index })
                                                      .Where(x => Svc.Objects.Any(obj => obj.ObjectKind == ObjectKind.GatheringPoint && obj.IsTargetable && obj.BaseId == x.Node.NodeId))
                                                      .OrderBy(x =>
@@ -366,7 +366,7 @@ namespace ICE.Scheduler.Tasks
 
             return false;
         }
-        private static void SetClosestTargetableNode(List<GathNodeInfo> gatherInfo)
+        private static void SetClosestTargetableNode(List<NodeInfo> gatherInfo)
         {
             var closestIndex = gatherInfo.Select((node, index) => new { Node = node, Index = index })
                                          .Where(x => Svc.Objects.Any(obj => obj.ObjectKind == ObjectKind.GatheringPoint && obj.IsTargetable && obj.BaseId == x.Node.NodeId))
@@ -403,8 +403,14 @@ namespace ICE.Scheduler.Tasks
         {
             var zoneId = Player.Territory;
             var missionEntry = CosmicHelper.CurrentMissionInfo;
-            var missionFlag = missionEntry.MapPosition;
-            var gatherInfo = GatheringRouteLoader.GetRoute(zoneId.RowId, missionFlag);
+            var gatherFile = GatheringRouteLoader.GetRoute(missionEntry.Gather_MapKey);
+            var gatherInfo = gatherFile?.Nodes;
+
+            if (gatherInfo == null || gatherInfo.Count == 0)
+            {
+                PluginLog.Warning($"No route found for mission {CosmicHelper.CurrentLunarMission}");
+                return true;
+            }
 
             var location = gatherInfo[Mission_Settings.nodeCounter];
 

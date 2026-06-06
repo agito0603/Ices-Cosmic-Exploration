@@ -2,6 +2,7 @@
 using Dalamud.Interface.Utility.Raii;
 using ICE.Utilities.Cosmic_Helper;
 using ICE.Utilities.GatheringHelper;
+using ICE.Utilities.GatheringHelper.RouteLoader;
 using ICE.Utilities.ImGuiTools;
 using OtterGui;
 using OtterGui.Table;
@@ -260,18 +261,55 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
             public override string ToName(MissionInfo mission) => mission.SheetInfo.Name;
             public override void DrawColumn(MissionInfo mission, int _)
             {
-                if (UnsupportedMissions.Ids.Contains(mission.Id))
+                if (mission.SheetInfo.TerritoryId == CosmicMoonRegistry.Auxesia.TerritoryId)
                 {
-                    ImGuiEx.IconWithTooltip(FontAwesomeIcon.ExclamationTriangle, "Hey, this mission is currently not supported.\n" +
-                        "I'm working on it currently, please give me time\n" +
-                        "Or in the case of fishing, give our big fisher strife time to make presets");
-                    ImGui.SameLine();
+                    if (mission.SheetInfo.IsGatherMission)
+                    {
+                        var route = mission.SheetInfo.Gather_MapKey;
+
+                        var gatherInfo = GatheringRouteLoader.GetRoute(route);
+                        if (gatherInfo == null || gatherInfo.Nodes.Count is 0)
+                            UnsupportedMissions.Ids.Add(mission.Id);
+
+                        if (UnsupportedMissions.Ids.Contains(mission.Id))
+                        {
+                            ImGuiEx.IconWithTooltip(new Vector4(0.85f, 0.15f, 0.15f, 1.0f), FontAwesomeIcon.ExclamationTriangle, 
+                                "This mission is not currently supported\n" +
+                                "I'm working on bringing it over still");
+                        }
+                        else
+                        {
+                            ImGuiEx.IconWithTooltip(FontAwesomeIcon.ExclamationTriangle, 
+                                "This mission MIGHT work. It might also not. This is your one warning\n" +
+                                "This zone is a mess and I'm slowly going insane detangling it.");
+                        }
+                        ImGui.SameLine();
+                    }
+                    else if (mission.SheetInfo.Jobs.Contains(18))
+                    {
+                        if (!GatheringUtil.MoonFishingLocations.TryGetValue(mission.SheetInfo.TerritoryId, out var zoneFishing)
+                            || !zoneFishing.TryGetValue(mission.SheetInfo.MapPosition, out var fishingHole)
+                            || fishingHole.Count == 0)
+                        {
+                            UnsupportedMissions.Ids.Add(mission.Id);
+                        }
+
+                        if (UnsupportedMissions.Ids.Contains(mission.Id))
+                        {
+                            ImGuiEx.IconWithTooltip(new Vector4(0.85f, 0.15f, 0.15f, 1.0f), FontAwesomeIcon.ExclamationTriangle, "Hey, this mission is currently not supported.\n" +
+                                "I'm working on it currently, please give me time\n" +
+                                "Or in the case of fishing, give our big fisher strife time to make presets");
+                            ImGui.SameLine();
+                        }
+                    }
                 }
 
-                if (mission.SheetInfo.Attributes.HasFlag(MissionAttributes.Gather))
+                if (mission.SheetInfo.Attributes.HasFlag(MissionAttributes.Gather) && mission.SheetInfo.TerritoryId == CosmicMoonRegistry.Auxesia.TerritoryId)
                 {
-                    var gatherInfo = GatheringRouteLoader.GetRoute(mission.SheetInfo.TerritoryId, mission.SheetInfo.MapPosition);
-                    if (gatherInfo == null || gatherInfo.Count is 0)
+                    var routeId = mission.SheetInfo.Gather_MapKey;
+
+                    var gatherInfo = GatheringRouteLoader.GetRoute(routeId);
+                    if (gatherInfo == null || gatherInfo.Nodes.Count is 0)
                         UnsupportedMissions.Ids.Add(mission.Id);
                 }
                 else if (mission.SheetInfo.Attributes.HasFlag(MissionAttributes.Fish))

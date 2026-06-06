@@ -206,6 +206,7 @@ namespace ICE.Ui
             }
 
             ImGui.SameLine();
+
             if (CosmicHelper.SheetMissionDict.TryGetValue(CosmicHelper.CurrentLunarMission, out var missionName) && SchedulerMain.State != IceState.AbandonMission)
             {
                 var missionText = $"[{CosmicHelper.CurrentLunarMission}] {missionName.Name}";

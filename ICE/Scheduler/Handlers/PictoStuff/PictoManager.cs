@@ -1,6 +1,6 @@
 ﻿using ECommons.GameHelpers;
-using ICE.Resources.GatheringRoutes;
 using ICE.Utilities.Cosmic_Helper;
+using ICE.Utilities.GatheringHelper.RouteLoader;
 using Pictomancy;
 using System.Collections.Generic;
 
@@ -127,7 +127,7 @@ namespace ICE.Scheduler.Handlers.PictoStuff
             }
         }
 
-        public static void DrawGatherNodes(List<GathNodeInfo>? routeItem)
+        public static void DrawGatherNodes(List<NodeInfo>? routeItem)
         {
             // Light colors with transparency (lighter alpha ~50%)
             uint lightBlue = 0x80ADD8E6;   // Light blue with 50% alpha
@@ -196,7 +196,7 @@ namespace ICE.Scheduler.Handlers.PictoStuff
                 }
             }
         }
-        public static void DrawGatherNodes(List<GathNodeInfo>? routeItem, uint selectedNode, List<Vector3>? waypointPath = null)
+        public static void DrawGatherNodes(List<NodeInfo>? routeItem, uint selectedNode, List<Vector3>? waypointPath = null)
         {
             // Light colors with transparency (lighter alpha ~50%)
             uint lightBlue = 0x80ADD8E6;   // Light blue with 50% alpha
@@ -292,26 +292,26 @@ namespace ICE.Scheduler.Handlers.PictoStuff
 
                     Vector3 position = new(currentNode.Position.X, currentNode.Position.Y + currentNode.FanHeight, currentNode.Position.Z);
 
-                    if (currentNode.Radius_Start > currentNode.Radius_End)
+                    if (currentNode.RadiusStart > currentNode.RadiusEnd)
                     {
                         AddDrawCommand(pictoDraw =>
                         {
                             // Draw from start up to 360
                             pictoDraw.AddFanFilled(
                                 position,
-                                currentNode.Distance_Min,
-                                currentNode.Distance_Max,
-                                DegreesToRadians(currentNode.Radius_Start),
+                                currentNode.MinDistance,
+                                currentNode.MaxDistance,
+                                DegreesToRadians(currentNode.RadiusStart),
                                 DegreesToRadians(360),
                                 fanColor);
 
                             // Draw from 0 up to end
                             pictoDraw.AddFanFilled(
                                 position,
-                                currentNode.Distance_Min,
-                                currentNode.Distance_Max,
+                                currentNode.MinDistance,
+                                currentNode.MaxDistance,
                                 DegreesToRadians(0),
-                                DegreesToRadians(currentNode.Radius_End),
+                                DegreesToRadians(currentNode.RadiusEnd),
                                 fanColor);
                         });
                     }
@@ -322,10 +322,10 @@ namespace ICE.Scheduler.Handlers.PictoStuff
                         {
                             pictoDraw.AddFanFilled(
                                 position,
-                                currentNode.Distance_Min,
-                                currentNode.Distance_Max,
-                                DegreesToRadians(currentNode.Radius_Start),
-                                DegreesToRadians(currentNode.Radius_End),
+                                currentNode.MinDistance,
+                                currentNode.MaxDistance,
+                                DegreesToRadians(currentNode.RadiusStart),
+                                DegreesToRadians(currentNode.RadiusEnd),
                                 fanColor);
                         });
                     }

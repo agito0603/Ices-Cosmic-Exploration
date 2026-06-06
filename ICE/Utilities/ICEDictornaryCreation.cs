@@ -116,6 +116,19 @@ public sealed partial class ICE
             Vector2 mapFlag = new(marker.Value.X - 1024, (marker.Value.Y - 1024));
             int radius = marker.Value.Radius;
 
+            uint marker_Gather = 0;
+            uint marker_Critical = 0;
+
+            List<uint> gatherJobs = new() { 16, 17, 18 }; 
+            if (entry.MissionToDo[0].RowId != 0 && jobs.ContainsAny(gatherJobs))
+            {
+                marker_Gather = entry.MissionToDo[0].Value.MapMarker.RowId;
+            }
+            if (entry.MissionToDo[1].RowId != 0)
+            {
+                marker_Critical = entry.MissionToDo[0].Value.MapMarker.RowId;
+            }
+
             // Stacked map markers — nudge slightly so route editor keys stay unique per mission row.
             if (CosmicMapMarkerNudges.TryGetOverride(keyId, out var overrideFlag))
                 mapFlag = overrideFlag;
@@ -603,6 +616,9 @@ public sealed partial class ICE
 
                     TemporaryActionId = tempActionId,
                     TemporaryActionCount = tempActionCount,
+
+                    Gather_MapKey = marker_Gather,
+                    Critical_MapKey = marker_Critical,
                 };
             }
         }
@@ -778,6 +794,68 @@ public sealed partial class ICE
             }
         }
 
+        foreach (var marker in Svc.Data.GetExcelSheet<WKSMissionMapMarker>())
+        {
+            if (marker.RowId == 0)
+                continue;
+            else
+            {
+                var iconId = marker.Icon;
+                var x = marker.X;
+                var y = marker.Y;
+                var radius = marker.Radius;
+
+                if (iconId == 63886)
+                {
+                    uint territory = 0;
+                    List<uint> missionIds = new();
+
+                    foreach (var mission in SheetMissionDict)
+                    {
+                        if (mission.Value.Critical_MapKey == marker.RowId)
+                        {
+                            territory = mission.Value.TerritoryId;
+                            missionIds.Add(mission.Key);
+                        }
+                    }
+
+                    GatheringUtil.CriticalSpots[marker.RowId] = new()
+                    {
+                        IconId = 63886,
+                        Radius = radius,
+                        X = x,
+                        Y = y,
+                        MissionIds = missionIds,
+                        TerritoryId = territory,
+                    };
+                }
+                else
+                {
+                    uint territory = 0;
+                    List<uint> missionIds = new();
+
+                    foreach (var mission in SheetMissionDict)
+                    {
+                        if (mission.Value.Critical_MapKey == marker.RowId)
+                        {
+                            territory = mission.Value.TerritoryId;
+                            missionIds.Add(mission.Key);
+                        }
+                    }
+
+                    GatheringUtil.GatherSpots[marker.RowId] = new()
+                    {
+                        Radius = radius,
+                        X = x,
+                        Y = y,
+                        TerritoryId = territory,
+                        MissionIds = missionIds,
+                    };
+                }
+            }
+
+        }
+
         EnsureAllMission();
         GatheringUtil.RegisterPresets();
         CosmicMoonContent.LogContentSummary();
@@ -864,11 +942,6 @@ public sealed partial class ICE
 
     private static void MigrateConfigSettings()
     {
-        if (!C.OldConfigMigrateV1)
-        {
-            // That means we're still on the old config version. Time to migrate if it exist
-            ConfigMigration.MigrateFromOldYaml(C);
-        }
         if (!C.MigratedOldArtisan)
         {
             Artisan_MigrateNew();

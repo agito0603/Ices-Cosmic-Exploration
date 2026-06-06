@@ -2,10 +2,9 @@
 using ECommons.GameHelpers;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using ICE.Resources.GatheringRoutes;
 using ICE.Scheduler.Handlers.PictoStuff;
-using ICE.Ui.DebugWindowTabs;
 using ICE.Utilities.Cosmic_Helper;
+using ICE.Utilities.GatheringHelper.RouteLoader;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using static ECommons.UIHelpers.AddonMasterImplementations.AddonMaster;
@@ -95,7 +94,7 @@ namespace ICE.Scheduler.Tasks
             // Handle starting navmesh
             return HandleStartNavmesh(pos, distance, stayMounted, npcLoc, usingCosmoliner, mounted, distanceToTarget, handle, useMount, mountBeforeMove);
         }
-        public static bool? Task_GatherMove(GathNodeInfo routeinfo, bool waitForBusy = true, float distance = 3.5f, bool stayMounted = false, bool mountBeforeMove = false)
+        public static bool? Task_GatherMove(NodeInfo routeinfo, bool waitForBusy = true, float distance = 3.5f, bool stayMounted = false, bool mountBeforeMove = false)
         {
             string handle = "Navmesh: Gather Move";
 
@@ -135,15 +134,15 @@ namespace ICE.Scheduler.Tasks
             Vector3 playerPos = Player.Position;
             float angleToPlayer = CalculateAngleToPlayer(nodePos, playerPos);
 
-            float node_MinAngle = PictomancyToFFXIV(routeinfo.Radius_Start + routeinfo.FanHeight);
-            float node_MaxAngle = PictomancyToFFXIV(routeinfo.Radius_End + routeinfo.FanHeight);
+            float node_MinAngle = PictomancyToFFXIV(routeinfo.RadiusStart + routeinfo.FanHeight);
+            float node_MaxAngle = PictomancyToFFXIV(routeinfo.RadiusEnd + routeinfo.FanHeight);
 
             bool isInsideFan = IsAngleInRange(angleToPlayer, node_MinAngle, node_MaxAngle);
             float sectionSize = isInsideFan ? 30f : 60f;
 
             var (sectionMin, sectionMax) = GetNearestSection(node_MinAngle, node_MaxAngle, angleToPlayer, sectionSize);
             float selectedAngle = RandomAngleInRange(sectionMin, sectionMax);
-            float selectedDistance = NextFloat(routeinfo.Distance_Min, routeinfo.Distance_Max);
+            float selectedDistance = NextFloat(routeinfo.MinDistance, routeinfo.MaxDistance);
 
             Vector3 randomPosition = CalculateFanPosition(nodePos, selectedAngle, selectedDistance, routeinfo.FanHeight);
             randomPosition = P.Navmesh.NearestPoint(randomPosition, 0.1f, 5f).Value;

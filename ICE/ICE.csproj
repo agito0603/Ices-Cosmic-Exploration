@@ -46,7 +46,6 @@
 		<EmbeddedResource Include="Resources\Sinus_Ardorum.png">
 			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
 		</EmbeddedResource>
-		<EmbeddedResource Include="Resources\GatheringRoutes\**\*.yaml" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -71,7 +70,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Resources\GatheringRoutes\1310_Oizys\" />
+	  <Folder Include="Resources\GatherRoutes\" />
 	</ItemGroup>
 
 	<!-- OtterGui depends on nested submodule OtterGuiInternal; init recursively if missing -->
