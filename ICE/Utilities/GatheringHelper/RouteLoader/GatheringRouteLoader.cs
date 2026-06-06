@@ -23,26 +23,24 @@ public static class GatheringRouteLoader
         Converters = { new Vector3Converter() }
     };
 
-    // route_id -> route
-    private static Dictionary<uint, GatheringRouteFile>? _cache;
+    public static Dictionary<uint, GatheringRoute> LoadedRoutes = new();
+
 
     // ── Loading ──────────────────────────────────────────────────────────────
 
-    public static Dictionary<uint, GatheringRouteFile> LoadAllRoutes()
+    public static void LoadAllRoutes()
     {
-        if (_cache != null)
-            return _cache;
 
-        _cache = new Dictionary<uint, GatheringRouteFile>();
+        var _cache = new Dictionary<uint, GatheringRoute>();
 
         LoadEmbeddedRoutes(_cache);
         LoadDiskRoutes(_cache);
 
         PluginLog.Information($"Loaded {_cache.Count} gathering routes");
-        return _cache;
+        LoadedRoutes = _cache;
     }
 
-    private static void LoadEmbeddedRoutes(Dictionary<uint, GatheringRouteFile> target)
+    private static void LoadEmbeddedRoutes(Dictionary<uint, GatheringRoute> target)
     {
         var assembly = Assembly.GetExecutingAssembly();
         var resources = assembly.GetManifestResourceNames()
@@ -54,7 +52,7 @@ public static class GatheringRouteLoader
             {
                 using var stream = assembly.GetManifestResourceStream(resourceName)!;
                 using var reader = new StreamReader(stream);
-                var route = JsonSerializer.Deserialize<GatheringRouteFile>(reader.ReadToEnd(), ReadOptions);
+                var route = JsonSerializer.Deserialize<GatheringRoute>(reader.ReadToEnd(), ReadOptions);
 
                 if (route == null) continue;
 
@@ -74,7 +72,7 @@ public static class GatheringRouteLoader
         }
     }
 
-    private static void LoadDiskRoutes(Dictionary<uint, GatheringRouteFile> target)
+    private static void LoadDiskRoutes(Dictionary<uint, GatheringRoute> target)
     {
         var basePath = GetBasePath();
         if (!Directory.Exists(basePath))
@@ -87,7 +85,7 @@ public static class GatheringRouteLoader
         {
             try
             {
-                var route = JsonSerializer.Deserialize<GatheringRouteFile>(
+                var route = JsonSerializer.Deserialize<GatheringRoute>(
                     File.ReadAllText(file), ReadOptions);
 
                 if (route == null) continue;
@@ -109,7 +107,7 @@ public static class GatheringRouteLoader
 
     // ── Saving ───────────────────────────────────────────────────────────────
 
-    public static void SaveRoute(GatheringRouteFile route)
+    public static void SaveRoute(GatheringRoute route)
     {
         if (!CosmicMoonRegistry.TryGetMoon(route.TerritoryId, out var moon))
         {
@@ -124,12 +122,10 @@ public static class GatheringRouteLoader
         route.DateModified = DateTime.UtcNow;
 
         File.WriteAllText(path, JsonSerializer.Serialize(route, WriteOptions));
-
-        // Update cache immediately
-        _cache ??= new();
-        _cache[route.RouteId] = route;
+        LoadedRoutes[route.RouteId] = route;
 
         PluginLog.Verbose($"Saved route {route.RouteId} -> {path}");
+        LoadAllRoutes();
     }
 
     // ── Stubs ────────────────────────────────────────────────────────────────
@@ -138,27 +134,24 @@ public static class GatheringRouteLoader
     /// Creates stub route files for any gathering missions in SheetMissionDict
     /// that don't already have a route file. Node is left null until captured in-mission.
     /// </summary>
-    public static List<uint> CreateMissingStubs(bool dryRun = false)
+    public static HashSet<uint> CreateMissingStubs(bool dryRun = false)
     {
-        var routes = LoadAllRoutes();
-        var created = new List<uint>();
+        var routes = LoadedRoutes;
+        var created = new HashSet<uint>();
 
         foreach (var (missionId, info) in CosmicHelper.SheetMissionDict)
         {
             if (!info.Jobs.Contains(16) && !info.Jobs.Contains(17))
                 continue;
 
-            if (routes.ContainsKey(missionId))
+            if (routes.ContainsKey(info.Gather_MapKey))
                 continue;
 
             uint jobId = info.Jobs.Contains(17) ? 17u : 16u;
 
-            PluginLog.Information($"Missing stub: route {missionId}, territory {info.TerritoryId}, job {jobId}");
+            IceLogging.Info($"Missing stub: route {info.Gather_MapKey}, territory {info.TerritoryId}, job {jobId}");
 
-            if (dryRun)
-                continue;
-
-            var stub = new GatheringRouteFile
+            var stub = new GatheringRoute
             {
                 RouteId = info.Gather_MapKey,
                 TerritoryId = info.TerritoryId,
@@ -167,11 +160,12 @@ public static class GatheringRouteLoader
                 Nodes = null
             };
 
-            SaveRoute(stub);
+            if (!dryRun)
+                SaveRoute(stub);
             created.Add(info.Gather_MapKey);
         }
 
-        PluginLog.Information(dryRun
+        IceLogging.Info(dryRun
             ? $"Dry run: {created.Count} stubs would be created"
             : $"Created {created.Count} stub routes");
 
@@ -180,26 +174,40 @@ public static class GatheringRouteLoader
 
     // ── Queries ──────────────────────────────────────────────────────────────
 
-    public static GatheringRouteFile? GetRoute(uint routeId)
+    public static GatheringRoute? GetRoute(uint routeId)
     {
-        var routes = LoadAllRoutes();
+        var routes = LoadedRoutes;
         return routes.TryGetValue(routeId, out var route) ? route : null;
     }
 
     public static bool HasNode(uint routeId) => GetRoute(routeId)?.Nodes is { Count: > 0 };
 
-    public static List<GatheringRouteFile> GetRoutesForTerritory(uint territoryId) =>
-        LoadAllRoutes().Values.Where(r => r.TerritoryId == territoryId).ToList();
+    public static List<GatheringRoute> GetRoutesForTerritory(uint territoryId) =>
+        LoadedRoutes.Values.Where(r => r.TerritoryId == territoryId).ToList();
 
-    public static List<GatheringRouteFile> GetRoutesForJob(uint jobId) =>
-        LoadAllRoutes().Values.Where(r => r.GatheringJobId == jobId).ToList();
+    public static List<GatheringRoute> GetRoutesForJob(uint jobId) =>
+        LoadedRoutes.Values.Where(r => r.GatheringJobId == jobId).ToList();
 
-    public static List<GatheringRouteFile> GetIncompleteRoutes() =>
-        LoadAllRoutes().Values.Where(r => r.Nodes is null or { Count: 0 }).ToList();
+    public static List<GatheringRoute> GetIncompleteRoutes() =>
+        LoadedRoutes.Values.Where(r => r.Nodes is null or { Count: 0 }).ToList();
 
-    // ── Cache ─────────────────────────────────────────────────────────────────
+    public static List<uint> AddedNodes()
+    {
+        List<uint> nodeIds = new();
 
-    public static void ClearCache() => _cache = null;
+        foreach (var route in LoadedRoutes)
+        {
+            if (route.Value.Nodes != null)
+            {
+                foreach (var node in route.Value.Nodes)
+                {
+                    if (!nodeIds.Contains(node.NodeId))
+                        nodeIds.Add(node.NodeId);
+                }
+            }
+        }
+        return nodeIds;
+    }
 
     // ── Internals ────────────────────────────────────────────────────────────
 

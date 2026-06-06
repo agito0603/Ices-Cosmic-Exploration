@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using Dalamud.IoC;
 using Dalamud.Plugin.Services;
 using ICE.Scheduler.Handlers.PictoStuff;
+using ICE.Utilities.GatheringHelper.RouteLoader;
 
 namespace ICE;
 
@@ -112,6 +113,7 @@ public sealed partial class ICE : IDalamudPlugin
         CosmicHelper.UpdateCriticalWeather();
         TestLoadRoutes();
         CosmicHelper.Task_UpdateRelicMissionInfo();
+        GatheringRouteLoader.LoadAllRoutes();
 
         MigrateConfigSettings();
         _ = Sounds.SoundPlayer.InitializeAsync();

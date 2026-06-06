@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace ICE.Utilities.GatheringHelper.RouteLoader;
 
-public class GatheringRouteFile
+public class GatheringRoute
 {
     [JsonPropertyName("route_id")]
     public uint RouteId { get; set; }
@@ -21,7 +21,7 @@ public class GatheringRouteFile
     public DateTime? DateModified { get; set; }
 
     [JsonPropertyName("node")]
-    public List<NodeInfo> Nodes { get; set; } = new();  // null = not yet captured
+    public List<NodeInfo> Nodes { get; set; } = new();
 }
 
 public class NodeInfo

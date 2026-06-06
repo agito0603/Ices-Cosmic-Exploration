@@ -46,6 +46,7 @@
 		<EmbeddedResource Include="Resources\Sinus_Ardorum.png">
 			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
 		</EmbeddedResource>
+		<EmbeddedResource Include="Resources\GatherRoutes\**\*" />
 	</ItemGroup>
 
 	<ItemGroup>

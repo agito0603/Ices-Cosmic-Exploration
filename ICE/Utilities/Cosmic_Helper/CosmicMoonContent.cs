@@ -11,7 +11,7 @@ public static class CosmicMoonContent
 {
     public static bool HasGatheringRoutes(uint territoryId)
     {
-        if (!GatheringRouteLoader.LoadAllRoutes().TryGetValue(territoryId, out var flags))
+        if (!GatheringRouteLoader.LoadedRoutes.TryGetValue(territoryId, out var flags))
             return false;
 
         return flags.Nodes.Count > 0;
@@ -56,7 +56,7 @@ public static class CosmicMoonContent
 
     public static (int withRoutes, int total) CountGatherMissionsWithRoutes(uint territoryId)
     {
-        var routes = GatheringRouteLoader.LoadAllRoutes();
+        var routes = GatheringRouteLoader.LoadedRoutes;
         var total = 0;
         var withRoutes = 0;
 

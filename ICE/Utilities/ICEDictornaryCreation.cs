@@ -801,9 +801,10 @@ public sealed partial class ICE
             else
             {
                 var iconId = marker.Icon;
-                var x = marker.X;
-                var y = marker.Y;
+                var x = marker.X - 1024;
+                var y = marker.Y - 1024;
                 var radius = marker.Radius;
+                List<uint> jobs = new();
 
                 if (iconId == 63886)
                 {
@@ -816,6 +817,11 @@ public sealed partial class ICE
                         {
                             territory = mission.Value.TerritoryId;
                             missionIds.Add(mission.Key);
+                            foreach (var job in mission.Value.Jobs)
+                            {
+                                if (!jobs.Contains(job))
+                                    jobs.Add(job);
+                            }
                         }
                     }
 
@@ -827,6 +833,7 @@ public sealed partial class ICE
                         Y = y,
                         MissionIds = missionIds,
                         TerritoryId = territory,
+                        JobId = jobs
                     };
                 }
                 else
@@ -836,10 +843,15 @@ public sealed partial class ICE
 
                     foreach (var mission in SheetMissionDict)
                     {
-                        if (mission.Value.Critical_MapKey == marker.RowId)
+                        if (mission.Value.Gather_MapKey == marker.RowId)
                         {
                             territory = mission.Value.TerritoryId;
                             missionIds.Add(mission.Key);
+                            foreach (var job in mission.Value.Jobs)
+                            {
+                                if (!jobs.Contains(job))
+                                    jobs.Add(job);
+                            }
                         }
                     }
 
@@ -850,6 +862,7 @@ public sealed partial class ICE
                         Y = y,
                         TerritoryId = territory,
                         MissionIds = missionIds,
+                        JobId = jobs
                     };
                 }
             }
