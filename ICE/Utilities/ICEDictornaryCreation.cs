@@ -3,6 +3,7 @@ using ICE.Ui;
 using ICE.Ui.MainUi.Settings;
 using ICE.Utilities.Cosmic_Helper;
 using ICE.Utilities.GatheringHelper;
+using ICE.Utilities.GatheringHelper.RouteLoader;
 using Lumina.Excel.Sheets;
 using System.Collections.Generic;
 using static ICE.ConfigFiles.Config;
@@ -1074,5 +1075,24 @@ public sealed partial class ICE
         var dye2 = Task_Gamba.DefaultGambaItems.Where(x => x.ItemId == 52256).FirstOrDefault();
         if (dye2 != null && !C.GambaItemWeights.Contains(dye2))
             C.GambaItemWeights.Add(dye2);
+    }
+    public static void UpdateMissingGathering()
+    {
+        foreach (var mission in CosmicHelper.SheetMissionDict)
+        {
+            if (mission.Value.Jobs.Contains(16) || mission.Value.Jobs.Contains(17))
+            {
+                var key = mission.Value.Gather_MapKey;
+                if (GatheringRouteLoader.LoadedRoutes.TryGetValue(key, out var routeInfo))
+                {
+                    if (routeInfo.Nodes is null)
+                        UnsupportedMissions.Ids.Add(mission.Key);
+                }
+                else
+                {
+                    UnsupportedMissions.Ids.Add(mission.Key);
+                }
+            }
+        }
     }
 }

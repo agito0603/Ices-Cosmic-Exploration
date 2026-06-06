@@ -117,6 +117,8 @@ public sealed partial class ICE : IDalamudPlugin
 
         MigrateConfigSettings();
         _ = Sounds.SoundPlayer.InitializeAsync();
+
+        UpdateMissingGathering();
     }
 
     private static void Init()

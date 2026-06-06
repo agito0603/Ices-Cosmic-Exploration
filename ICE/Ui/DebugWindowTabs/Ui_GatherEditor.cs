@@ -120,10 +120,13 @@ namespace ICE.Ui.DebugWindowTabs
                 {
                     NodeId = target.BaseId,
                     Position = target.Position,
-                    LandZone = playerPos
+                    LandZone = playerPos  // temporary fallback
                 };
                 route.Nodes.Add(newNode);
                 selectedNode = newNode;
+
+                // Fire-and-forget: generate fan then pick landing zone
+                _ = GenerateFanThenPickLandZone(newNode);
             }
 
             if (!GatheringUtil.GatherSpots.TryGetValue(_selectedRoute, out var mapInfo))
@@ -263,6 +266,11 @@ namespace ICE.Ui.DebugWindowTabs
                     ImGui.Text($"Node: {nodeInfo.NodeId}");
                     ImGui.Text($"X: {nodeInfo.Position.X:N2} | Y: {nodeInfo.Position.Y:N2} | Z: {nodeInfo.Position.Z:N2}");
 
+                    if (ImGui.Button("Nav Move To"))
+                    {
+                        P.Navmesh.PathfindAndMoveTo(nodeInfo.LandZone, false);
+                    }
+
                     ImGui.Dummy(new(0, 5));
                     if (ImGui.Button($"Player Start: {nodeInfo.LandZone}"))
                     {
@@ -351,6 +359,55 @@ namespace ICE.Ui.DebugWindowTabs
 
         private static bool _isGeneratingFan = false;
         private static string _fanGenStatus = "";
+        private static async Task GenerateFanThenPickLandZone(NodeInfo node)
+        {
+            await GenerateFanForNode(node);
+
+            // If fan gen failed or produced no arc, leave LandZone as-is
+            if (node.RadiusStart == 0 && node.RadiusEnd == 0)
+                return;
+
+            await PickLandZoneFromFan(node);
+        }
+
+        private static async Task PickLandZoneFromFan(NodeInfo node)
+        {
+            const float snapToleranceXZ = 0.5f;
+            const float snapToleranceY = 5f;
+
+            Vector3 nodePos = node.Position;
+
+            // Mid-angle of the fan arc (in degrees, FFXIV space where 0=North)
+            float arcLength = node.RadiusEnd >= node.RadiusStart
+                ? node.RadiusEnd - node.RadiusStart
+                : (360f - node.RadiusStart) + node.RadiusEnd;
+
+            float midAngleDeg = (node.RadiusStart + arcLength / 2f) % 360f;
+            float midDist = (node.MinDistance + node.MaxDistance) / 2f;
+
+            // FFXIV 0=North → standard math angle: standardAngle = 180 - ffxivAngle
+            float standardAngle = 180f - midAngleDeg;
+            float rad = standardAngle * (MathF.PI / 180f);
+
+            Vector3 candidate = new Vector3(
+                nodePos.X + midDist * MathF.Sin(rad),
+                nodePos.Y + node.FanHeight,
+                nodePos.Z + midDist * MathF.Cos(rad)
+            );
+
+            var nearest = await Task.Run(() =>
+                P.Navmesh.NearestPointReachable(candidate, snapToleranceXZ, snapToleranceY));
+
+            if (nearest.HasValue)
+            {
+                node.LandZone = nearest.Value;
+                _fanGenStatus += $" | LandZone: {nearest.Value.X:F1}, {nearest.Value.Y:F1}, {nearest.Value.Z:F1}";
+            }
+            else
+            {
+                _fanGenStatus += " | LandZone pick failed, kept player pos";
+            }
+        }
         private static async Task GenerateFanForNode(NodeInfo route)
         {
             _isGeneratingFan = true;
