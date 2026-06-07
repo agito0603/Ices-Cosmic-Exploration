@@ -667,7 +667,8 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
                 if (info.IsSequence) return 9;
                 if (info.IsWeather) return 8;
                 if (info.IsTimed) return 7;
-                // Rank 6 = Provisional (handled above), 5 = Ex, 4 = A, 3 = B, 2 = C, 1 = D
+                if (info.IsMaster) return 6;
+                // 5 = Ex, 4 = A, 3 = B, 2 = C, 1 = D
                 return (int)info.Rank;
             }
 
@@ -733,7 +734,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
                 if (FilterValue.HasFlag(MissionFilter.BRank) && sheetInfo.BRank && !special) return true;
                 if (FilterValue.HasFlag(MissionFilter.CRank) && sheetInfo.CRank && !special) return true;
                 if (FilterValue.HasFlag(MissionFilter.DRank) && sheetInfo.Drank && !special) return true;
-                if (FilterValue.HasFlag(MissionFilter.Master) && sheetInfo.Master) return true;
+                if (FilterValue.HasFlag(MissionFilter.Master) && sheetInfo.IsMaster) return true;
 
                 return false;
             }
@@ -897,7 +898,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
                         var silverEnabled = !timeExpired && highestTurnin >= TurninState.Silver;
                         var bronzeEnabled = !timeExpired && highestTurnin >= TurninState.Bronze;
 
-                        if (item.SheetInfo.Rank == 6 && !item.SheetInfo.IsProvisional)
+                        if (item.SheetInfo.IsMaster)
                         {
                             using (ImRaii.PushColor(ImGuiCol.Text, timeExpired ? GoldColor : DisabledColor))
                             {

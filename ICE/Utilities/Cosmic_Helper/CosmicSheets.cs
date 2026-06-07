@@ -137,6 +137,7 @@ public static unsafe partial class CosmicHelper
         public bool IsWeather => Attributes.HasFlag(MissionAttributes.ProvisionalWeather);
         public bool IsTimed => Attributes.HasFlag(MissionAttributes.ProvisionalTimed);
         public bool IsSequence => Attributes.HasFlag(MissionAttributes.ProvisionalSequential);
+        public bool IsMaster => Attributes.HasFlag(MissionAttributes.Master);
         public bool ARank => Rank is 5 or 4;
         public bool BRank => Rank is 3;
         public bool CRank => Rank is 2;

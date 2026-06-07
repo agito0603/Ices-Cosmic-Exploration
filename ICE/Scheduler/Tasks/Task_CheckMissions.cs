@@ -1206,8 +1206,9 @@ namespace ICE.Scheduler.Tasks
 
                     var job = CosmicHelper.SheetMissionDict[missionId].Jobs.First();
 
+                    // TODO: Need to just clean this up later, the function to directly grab it is no longer necessary
                     // Tool Mastery missions are only readable/grabbable from their own tab (3).
-                    byte categoryTab = CosmicHelper.SheetMissionDict[missionId].Master ? CosmicHandler.ToolMasteryTab : (byte)0;
+                    byte categoryTab = CosmicHelper.SheetMissionDict[missionId].IsMaster ? CosmicHandler.ToolMasteryTab : (byte)0;
 
                     if (CorrectJobTab(job, categoryTab))
                     {
