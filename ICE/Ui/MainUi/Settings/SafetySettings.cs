@@ -87,6 +87,12 @@ namespace ICE.Ui.MainUi.Settings
                 C.Delay_Gather = gatherDelay;
                 C.Save();
             }
+            bool closeRewardPopup = C.HideRewardWindow;
+            if (ImGui.Checkbox("Auto Close Reward Popups", ref closeRewardPopup))
+            {
+                C.HideRewardWindow = closeRewardPopup;
+                C.Save();
+            }
         }
     }
 }

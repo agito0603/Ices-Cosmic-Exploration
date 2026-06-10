@@ -216,6 +216,7 @@ namespace ICE.Ui.DebugWindowTabs
                 {
                     if (routeInfo.Nodes != null)
                     {
+                        NodeInfo removeNode = new();
                         for (int i = 0; i < routeInfo.Nodes.Count; i++)
                         {
                             var node = routeInfo.Nodes[i];
@@ -253,7 +254,14 @@ namespace ICE.Ui.DebugWindowTabs
                                     selectedNode = node;
                                 }
                             }
+                            ImGui.SameLine();
+                            if (ImGuiEx.IconButton(FontAwesomeIcon.Trash, $"Remove {node.NodeId}"))
+                            {
+                                removeNode = node;
+                            }
                         }
+                        if (routeInfo.Nodes.Contains(removeNode))
+                            routeInfo.Nodes.Remove(removeNode);
                     }
                 }
                 ImGui.EndChild();
@@ -269,6 +277,12 @@ namespace ICE.Ui.DebugWindowTabs
                     if (ImGui.Button("Nav Move To"))
                     {
                         P.Navmesh.PathfindAndMoveTo(nodeInfo.LandZone, false);
+                    }
+                    ImGui.SameLine();
+                    if (ImGui.Button("Move To [Fan]"))
+                    {
+                        Task_NavmeshMove.ResetGatherMove();
+                        P.TaskManager.Enqueue(() => Task_NavmeshMove.Task_GatherMove(nodeInfo, stayMounted: true));
                     }
 
                     ImGui.Dummy(new(0, 5));

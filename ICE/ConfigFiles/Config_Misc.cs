@@ -32,6 +32,7 @@ public partial class Config
     public bool UseAethernet { get; set; } = true;
     public float HubReturn_Distance { get; set; } = 75f;
     public bool UseRedAlertNpc { get; set; } = false;
+    public bool HideRewardWindow { get; set; } = true;
 
     public class MissionCommand
     {

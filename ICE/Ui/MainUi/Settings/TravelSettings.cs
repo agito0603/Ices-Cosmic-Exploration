@@ -89,6 +89,19 @@ namespace ICE.Ui.MainUi.Settings.Settings_Table
                 }
             }
 
+            int GatherFanRandom = C.GatherFanSectionSize;
+            ImGui.SetNextItemWidth(200);
+            if (ImGui.SliderInt("Gathering Fan Selection", ref GatherFanRandom, 0, 360))
+            {
+                C.GatherFanSectionSize = GatherFanRandom;
+                C.SaveDebounced();
+            }
+            ImGui.SameLine();
+            ImGui_Ice.IconWithTooltip(FontAwesomeIcon.QuestionCircle,
+                "This will adjust how much of the center point of the fan it will randomize from.\n" +
+                "360 = the whole fan will be available for selection\n" +
+                "Anything besides that will chose within that fan (if it's available)", false);
+
             bool useHubReturn = C.UseHubReturn;
             if (ImGui.Checkbox("Use Hub Return", ref useHubReturn))
             {

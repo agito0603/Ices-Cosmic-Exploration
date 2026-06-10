@@ -46,7 +46,7 @@ namespace ICE.Ui.DebugWindowTabs
                         ImGui.Text("Current Score:");
                         ImGui.TableNextColumn();
 
-                        ImGui.Text($"{CurrentScore()}");
+                        ImGui.Text($"{CosmicHandler.GetScore()}");
 
                         ImGui.TableNextRow();
                         ImGui.TableSetColumnIndex(0);
@@ -157,14 +157,6 @@ namespace ICE.Ui.DebugWindowTabs
             {
                 ImGui.Text("Waiting for \"WKSMissionInfomation\" to be visible");
             }
-        }
-
-        private static unsafe uint CurrentScore()
-        {
-            var managerPtr = WKSManager.Instance();
-            if (managerPtr == null) return 0;
-
-            return managerPtr->State.CurrentMission.Score;
         }
     }
 }

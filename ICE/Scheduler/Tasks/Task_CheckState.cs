@@ -264,7 +264,7 @@ namespace ICE.Scheduler.Tasks
                 if (C.StopOnceRelicFinished)
                 {
                     var relicInfo = cosmicClassInfo[(uint)jobId];
-                    bool potentionalTurnin = relicInfo.Stage_Current != relicInfo.Stage_Next;
+                    bool potentionalTurnin = relicInfo.Stage_Current < relicInfo.Stage_Next;
                     bool canTurnin = true;
 
                     if (potentionalTurnin)

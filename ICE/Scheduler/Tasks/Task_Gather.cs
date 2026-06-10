@@ -55,11 +55,6 @@ namespace ICE.Scheduler.Tasks
         {
             string tag = "Gather: Gather Interacting";
 
-            var missionInfo = CosmicHelper.CurrentMissionInfo;
-            bool collectableItem = missionInfo.Attributes.HasFlag(MissionAttributes.Collectables);
-            bool reduceItems = missionInfo.Attributes.HasFlag(MissionAttributes.ReducedItems);
-            bool ScoreMode = missionInfo.IsMaster && C.MissionConfig[CosmicHelper.CurrentLunarMission].TurninGoal == TurninState.TimeExpired;
-
             bool CheckDelay()
             {
                 if (C.Delay_Gather)
@@ -88,6 +83,13 @@ namespace ICE.Scheduler.Tasks
                 }
             }
 
+            var missionInfo = CosmicHelper.CurrentMissionInfo;
+            bool collectableItem = missionInfo.Attributes.HasFlag(MissionAttributes.Collectables);
+            bool reduceItems = missionInfo.Attributes.HasFlag(MissionAttributes.ReducedItems);
+
+            bool QuickGather = missionInfo.IsMaster && ((C.MissionConfig[CosmicHelper.CurrentLunarMission].TurninGoal < TurninState.TimeExpired && collectableItem) || !collectableItem);
+            bool allowBuffs = QuickGather || !missionInfo.IsMaster;
+
             if (Svc.Condition[ConditionFlag.Gathering])
             {
                 // We should always have this condition up while we're gathering. Even if a revisit happens
@@ -98,10 +100,10 @@ namespace ICE.Scheduler.Tasks
                     {
                         if (EzThrottler.Throttle("Log message"))
                         {
-                            IceLogging.Debug($"Collectable: {collectableItem} | Reduce: {reduceItems} | Score Mode: {ScoreMode}");
+                            IceLogging.Debug($"Collectable: {collectableItem} | Reduce: {reduceItems} | Score Mode: {QuickGather}");
                         }
 
-                        if (reduceItems || collectableItem)
+                        if (reduceItems || (collectableItem && !missionInfo.IsMaster))
                         {
                             // We need to find an item where it's a collectable so we can just initiate the gathering window
                             var item = gather.GatheredItems.Where(x => x.IsCollectable).FirstOrDefault();
@@ -129,7 +131,7 @@ namespace ICE.Scheduler.Tasks
                             if (CheckDelay())
                                 return false;
 
-                            if (!ScoreMode)
+                            if (allowBuffs)
                             {
                                 if (UseGatherAction(configId, gatherChance, boonChance, gather.CurrentIntegrity, gather.TotalIntegrity, playerGp))
                                 {
@@ -163,7 +165,7 @@ namespace ICE.Scheduler.Tasks
                             else
                             {
                                 // we must not need any of those items, so going to just do a first item gather
-                                if (!ScoreMode)
+                                if (allowBuffs)
                                     gather.GatheredItems
                                         .Where(x => x.ItemID != 0)
                                         .Where(x => !x.IsCollectable)
@@ -437,6 +439,7 @@ namespace ICE.Scheduler.Tasks
             }
             else
             {
+                Task_NavmeshMove.ResetGatherMove();
                 var rank = Task_CheckScore.CurrentRank();
 
 

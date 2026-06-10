@@ -79,9 +79,15 @@ namespace ICE.Ui.DebugWindowTabs
                     }
 
                     ImGui.TableNextColumn();
-                    if (CosmicHelper.CriticalLocations.TryGetValue(entry.Key, out var critical))
+                    if (GatheringUtil.CriticalSpots.TryGetValue(entry.Value.Critical_MapKey, out var criticalInfo))
                     {
                         ImGuiEx.Icon(FontAwesomeIcon.FlagCheckered);
+                        if (ImGui.IsItemHovered())
+                        {
+                            ImGui.BeginTooltip();
+                            ImGui.Text($"World Cords: {criticalInfo.WorldCords.X:N2}, {criticalInfo.WorldCords.Y:N2}, {criticalInfo.WorldCords.Z:N2}");
+                            ImGui.EndTooltip();
+                        }
                         if (ImGui.IsItemClicked())
                         {
                             if (P.Navmesh.Installed)
@@ -89,8 +95,8 @@ namespace ICE.Ui.DebugWindowTabs
                                 if (P.Navmesh.IsReady())
                                 {
                                     var missionInfo = entry.Value;
-                                    IceLogging.DestinationLogs.Log(critical.RawLocation);
-                                    P.Navmesh.PathfindAndMoveTo(critical.RawLocation, false);
+                                    IceLogging.DestinationLogs.Log(criticalInfo.WorldCords);
+                                    P.Navmesh.PathfindAndMoveTo(criticalInfo.WorldCords, false);
                                 }
                                 else
                                 {

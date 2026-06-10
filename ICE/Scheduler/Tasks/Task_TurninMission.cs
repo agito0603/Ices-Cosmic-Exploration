@@ -41,9 +41,9 @@ namespace ICE.Scheduler.Tasks
                 {
                     IceLogging.Verbose("Critical mission was found, checking for location info", tag);
 
-                    if (CosmicHelper.CriticalLocations.TryGetValue(id, out var location) && location.RawLocation != Vector3.Zero)
+                    if (GatheringUtil.CriticalSpots.TryGetValue(sheetInfo.Critical_MapKey, out var criticalInfo) && criticalInfo.WorldCords != Vector3.Zero)
                     {
-                        if (Player.DistanceTo(location.RawLocation) < 75)
+                        if (Player.DistanceTo(criticalInfo.WorldCords) < 75)
                         {
                             IceLogging.Verbose("We're close enough to the base location that we don't need to do any fancy traveling, going to check if we need to interact", tag);
                             P.TaskManager.Insert(() => RedAlert_CloseToTurnin(), "Checking to make sure we're close enough");
@@ -51,7 +51,7 @@ namespace ICE.Scheduler.Tasks
                         else
                         {
                             IceLogging.Verbose("We're far enough away that we need to consider taking the npc for getting there, so going to do so");
-                            P.TaskManager.Insert(() => Task_NavmeshMove.Enqueue_RedAlertNavmesh(location.RawLocation, distance: 75, missionId: id), "Checking to make sure we're close enough");
+                            P.TaskManager.Insert(() => Task_NavmeshMove.Enqueue_RedAlertNavmesh(criticalInfo.WorldCords, distance: 75, missionId: id), "Checking to make sure we're close enough");
                         }
                     }
                     else
