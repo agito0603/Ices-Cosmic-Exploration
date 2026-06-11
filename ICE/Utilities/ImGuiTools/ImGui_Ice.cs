@@ -941,6 +941,7 @@ public static partial class ImGui_Ice
         var ExpInfo = CosmicHelper.Cosmic_ClassInfo();
         if (ExpInfo.TryGetValue(jobId, out var jobInfo))
         {
+            ImGui.Text($"Relic Lv. {jobInfo.Stage_Current} / 20");
             foreach (var exp in jobInfo.CurrentExp.Values)
             {
                 ImGui.Text($"Exp {exp.Name}: {exp.Current} / {exp.Needed}");

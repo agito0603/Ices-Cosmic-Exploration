@@ -85,7 +85,7 @@ namespace ICE.Ui.DebugWindowTabs
             }
             if (ImGui.Button("Swap Bait... simple"))
             {
-                if (CosmicHelper.CurrentBait == 0)
+                if (CosmicHelper.CurrentBait() == 0)
                 {
                     IceLogging.Debug("Bait is not currently equipped");
                 }
@@ -94,7 +94,7 @@ namespace ICE.Ui.DebugWindowTabs
             }
             if (ImGui.Button("Stupid Test"))
             {
-                if (CosmicHelper.CurrentBait == 0)
+                if (CosmicHelper.CurrentBait() == 0)
                 {
                     IceLogging.Debug($"No bait is equipped");
                 }
@@ -203,6 +203,21 @@ namespace ICE.Ui.DebugWindowTabs
                         P.Artisan.SetTempSolverBackToNormal(preCraft.Value.RecipeId);
                     }
                 }
+            }
+            if (ImGui.Button("Disable Endurance"))
+            {
+                P.Artisan.SetEnduranceStatus(false);
+            }
+            if (ImGui.Button("Test Toast"))
+            {
+                string message = "[I.C.E.] You didn't read the little warning in the mission setup\n" +
+                    "You need to update autohook for you to be able to fish here on Auxesia. Please swap to testing version";
+                Svc.Chat.Print(new()
+                {
+                    Type = Dalamud.Game.Text.XivChatType.ErrorMessage,
+                    Message = message,
+                });
+                Svc.Toasts.ShowNormal($"{message}");
             }
         }
 

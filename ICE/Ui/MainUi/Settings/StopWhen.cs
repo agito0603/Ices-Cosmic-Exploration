@@ -119,6 +119,25 @@ namespace ICE.Ui.MainUi.Settings
 
             #endregion
 
+            #region Relic Level
+
+            bool stopWhen = C.StopAtRelicLv;
+            if (ImGui.Checkbox("Stop At Relic Lv.", ref stopWhen))
+            {
+                C.StopAtRelicLv = stopWhen;
+                C.Save();
+            }
+            ImGui.SameLine();
+            int relicLv = C.RelicLv;
+            ImGui.SetNextItemWidth(150);
+            if (ImGui.SliderInt("##RelicLvSlider", ref relicLv, 1, 20))
+            {
+                C.RelicLv = relicLv;
+                C.SaveDebounced();
+            }
+
+            #endregion
+
             #region Sound Alert
 
             bool playSoundAlert = C.PlaySoundAlert;

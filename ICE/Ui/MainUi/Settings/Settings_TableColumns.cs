@@ -50,43 +50,6 @@ public static class Settings_TableColumns
             C.Save();
         }
 
-        bool showManualMode = C.ShowManualMode;
-        if (!showManualMode)
-        {
-            using (ImRaii.Disabled(!(ImGui.IsKeyDown(ImGuiKey.LeftShift) || ImGui.IsKeyDown(ImGuiKey.RightShift))))
-            {
-                if (ImGui.Checkbox("Show Manual Mode Column", ref showManualMode))
-                {
-                    C.ShowManualMode = showManualMode;
-                    if (!showManualMode)
-                    {
-                        foreach (var mission in C.MissionConfig)
-                            mission.Value.ManualMode = false;
-                    }
-                }
-            }
-            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-            {
-                ImGui.BeginTooltip();
-                ImGui.Text("MAKE SURE TO READ THE INFO ON THE RIGHT !");
-                ImGui.Text("If you've done so, you can hold shift to allow enabling this");
-                ImGui.EndTooltip();
-            }
-        }
-        else
-        {
-            if (ImGui.Checkbox("Show Manual Mode Column", ref showManualMode))
-            {
-                C.ShowManualMode = showManualMode;
-                if (!showManualMode)
-                {
-                    foreach (var mission in C.MissionConfig)
-                        mission.Value.ManualMode = false;
-                }
-                C.Save();
-            }
-        }
-
         ImGuiEx.HelpMarker("Only enable this if you want plan on doing missions YOURSELF. AND NOT AUTOMATING IT. " +
                            "Or if you're letting a different plugin do all the automating of turning in, craftings, gathering... and not letting I.C.E. handle interacting with those plugins");
     }

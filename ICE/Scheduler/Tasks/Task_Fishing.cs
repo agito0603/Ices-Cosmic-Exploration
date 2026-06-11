@@ -91,7 +91,7 @@ namespace ICE.Scheduler.Tasks
                     SchedulerMain.State = IceState.AbandonMission;
                     return true;
                 }
-                if (CosmicHelper.CurrentBait == 0)
+                if (CosmicHelper.CurrentBait() == 0)
                 {
                     if (EzThrottler.Throttle("Bait Message", 2000))
                         IceLogging.Debug($"We are reporting we didn't have a bait equipped, so we're going to equip the first bait that we found: [{firstBait}]", handle);
@@ -212,7 +212,7 @@ namespace ICE.Scheduler.Tasks
             }
             bool hasBait = false;
 
-            if (CosmicHelper.CurrentBait == 0)
+            if (CosmicHelper.CurrentBait() == 0)
             {
                 if (EzThrottler.Throttle("Equipping bait"))
                 {

@@ -158,7 +158,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
                 ImGui.SetCursorPosY(ImGui.GetCursorPosY() + yOffset);
 
                 bool unsupportedArtisan = false; // xpLeveling && CosmicHelper.CrafterJobList.Contains((uint)Player.Job);
-                bool unsupportedMoon = xpLeveling
+                bool unsupportedMoon = xpLeveling 
                     && CosmicMoonRegistry.TryGetMoon(Player.Territory.RowId, out var currentMoon)
                     && !CosmicMoonRegistry.HasLevelingContent(currentMoon);
 
@@ -200,6 +200,20 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
                             missing.Add("gathering routes");
                         if (missing.Count > 0)
                             ImGui.Text($"Still needed: {string.Join(", ", missing)}.");
+                        ImGui.EndTooltip();
+                    }
+                }
+                if (!P.AutoHook.UpdatedPlugin() && CosmicMoonRegistry.Auxesia.TerritoryId == Player.Territory.RowId)
+                {
+                    ImGui.SameLine(0, 10 * scale);
+                    ImGui.SetCursorPosY(ImGui.GetCursorPosY() + yOffset);
+                    ImGuiEx.Icon(EColor.Red, FontAwesomeIcon.ExclamationTriangle);
+                    if (ImGui.IsItemHovered())
+                    {
+                        ImGui.BeginTooltip();
+                        ImGui.Text($"Hey! Your version of autohook is not currently supported on this planet");
+                        ImGui.Text($"You need to (currently) be on the testing version to be able fish automated here");
+                        ImGui.Text($"There will be another warning to pop up if you try and run this still and it selects a fishing mission...");
                         ImGui.EndTooltip();
                     }
                 }
