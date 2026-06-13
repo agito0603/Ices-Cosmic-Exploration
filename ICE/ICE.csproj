@@ -62,6 +62,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\OtterGui\OtterGui.csproj" />
+		<ProjectReference Include="..\Glamourer.Api\Glamourer.Api.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -71,6 +72,7 @@
 
 	<ItemGroup>
 	  <Folder Include="Resources\GatherRoutes\" />
+	  <Folder Include="Ui\NewFolder\" />
 	</ItemGroup>
 
 	<!-- OtterGui depends on nested submodule OtterGuiInternal; init recursively if missing -->

@@ -198,7 +198,6 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
         {
 
         }
-
         public sealed class EnabledColumn : ItemFilterColumn
         {
             public override float Width => Math.Max(
@@ -710,12 +709,42 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
                     {
                         var icon = item.SheetInfo.IsTimed ? FontAwesomeIcon.Clock : FontAwesomeIcon.ListOl;
                         ImGuiEx.Icon(icon);
-                        if (ImGui.IsItemHovered())
+                        if (item.SheetInfo.IsTimed)
                         {
-                            ImGui.BeginTooltip();
-                            ImGui.Text("Time Slot");
-                            ImGui.Text($"{item.SheetInfo.StartTime:D2}:00 - {item.SheetInfo.EndTime:D2}:00");
-                            ImGui.EndTooltip();
+                            if (ImGui.IsItemHovered())
+                            {
+                                ImGui.BeginTooltip();
+                                ImGui.Text("Time Slot");
+                                ImGui.Text($"{item.SheetInfo.StartTime:D2}:00 - {item.SheetInfo.EndTime:D2}:00");
+                                ImGui.EndTooltip();
+                            }
+                        }
+                        else if (item.SheetInfo.IsSequence)
+                        {
+                            if (ImGui.IsItemHovered())
+                            {
+                                ImGui.BeginTooltip();
+                                ImGui.Text($"Sequence Missions");
+                                if (item.SheetInfo.SequenceMissions_Previous.Count() > 0)
+                                {
+                                    ImGui.Separator();
+                                    ImGui.Text($"Previous Missions");
+                                    foreach (var mission in item.SheetInfo.SequenceMissions_Previous)
+                                    {
+                                        ImGuiEx.IconWithText(FontAwesomeIcon.ListOl, $"[{mission}] {CosmicHelper.SheetMissionDict[mission].Name}");
+                                    }
+                                }
+                                if (item.SheetInfo.SequenceMissions_Next.Count() > 0)
+                                {
+                                    ImGui.Separator();
+                                    ImGui.Text($"Next Missions");
+                                    foreach (var mission in item.SheetInfo.SequenceMissions_Next)
+                                    {
+                                        ImGuiEx.IconWithText(FontAwesomeIcon.ListOl, $"[{mission}] {CosmicHelper.SheetMissionDict[mission].Name}");
+                                    }
+                                }
+                                ImGui.EndTooltip();
+                            }
                         }
                     }
                     else

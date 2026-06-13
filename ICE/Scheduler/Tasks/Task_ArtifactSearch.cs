@@ -8,7 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using static ECommons.UIHelpers.AddonMasterImplementations.AddonMaster;
-using static ICE.Ui.DebugWindowTabs.Ui_OyzinMap;
+using static ICE.Ui.Debug_Tabs.Debug_Ui.Ui_OyzinMap;
 
 namespace ICE.Scheduler.Tasks
 {
