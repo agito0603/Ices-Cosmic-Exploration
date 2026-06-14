@@ -180,11 +180,21 @@ namespace ICE.Scheduler.Tasks
                     }
                     else if (modeSelected == ModeSelect.Standard)
                     {
-                        if (!config.Enabled)
-                            continue;
-
                         var jobLevel = Math.Min(Player.GetLevel((Job)mission.Value.Jobs.First()), Player.GetLevel((Job)mission.Value.Jobs.Last()));
                         if (jobLevel < mission.Value.Level)
+                            continue;
+
+                        // Tool Mastery / Mastership missions become available only after tool completion.
+                        // Do not require the per-mission Enabled checkbox here; availability is confirmed later from the Tool Mastery tab.
+                        if (mission.Value.IsMaster)
+                        {
+                            if (mission.Value.Jobs.Contains(Mission_Settings.SelectedJob))
+                                MissionLibrary[MissionKind.Master].Add(missionId);
+
+                            continue;
+                        }
+
+                        if (!config.Enabled)
                             continue;
 
                         if (provisional)
@@ -449,6 +459,15 @@ namespace ICE.Scheduler.Tasks
                         case MissionTypes.Standard:
                         {
                             var mode = Mission_Settings.Mode;
+
+                            if (mode is ModeSelect.Standard && MissionLibrary[MissionKind.Master].Count > 0)
+                            {
+                                P.TaskManager.Enqueue(
+                                    () => CheckMissions(MissionLibrary[MissionKind.Master], MissionTypes.ToolMastery),
+                                    "Checking Tool Mastery missions before Standard missions"
+                                );
+                            }
+
                             if (mode is ModeSelect.MissionGoldMode)
                             {
                                 List<uint> basicMissions = new();
@@ -959,6 +978,19 @@ namespace ICE.Scheduler.Tasks
                         }
                         else if (type is MissionTypes.ToolMastery)
                         {
+                            // Tool Mastery / Mastership missions live on their own category tab.
+                            // SetSelectedJobTab updates the agent, but the visible UI list may not refresh until the actual tab button is selected.
+                            if (!CosmicHandler.EnsureCategoryTab(CosmicHandler.ToolMasteryTab))
+                                return false;
+
+                            masteryMissions = CosmicHandler.Mastery_AvailableMissions();
+
+                            if (masteryMissions.Count == 0)
+                            {
+                                // Fallback for cases where the master getter is stale but the UI tab is visible.
+                                masteryMissions = CosmicHandler.VisibleMissions();
+                            }
+
                             IceLogging.Verbose($"Checking missions for the following mode:\n" +
                                 $"Mode: {type}\n" +
                                 $"Loaded mission count: {missionList.Count()}\n" +
@@ -973,6 +1005,8 @@ namespace ICE.Scheduler.Tasks
                                     return true;
                                 }
                             }
+
+                            IceLogging.Info("No Tool Mastery missions were found on the Tool Mastery tab. Continuing on", tag);
                             return true;
                         }
                     }
