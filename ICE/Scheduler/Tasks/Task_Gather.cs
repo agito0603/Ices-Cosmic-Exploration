@@ -452,6 +452,7 @@ namespace ICE.Scheduler.Tasks
                     IceLogging.Info($"Gathering window is now visible, continuing onto GatheringInteraction Task", "[Gathering: OpenGatheringMenu]");
                     P.TaskManager.Insert(() => GatherInteractV2(), "Gathering at the node", Utils.TaskConfig);
                     Mission_Settings.nodeTotal += 1;
+                    GreaterReachCount = 0;
                     return true;
                 }
                 else
